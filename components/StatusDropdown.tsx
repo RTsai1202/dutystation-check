@@ -205,12 +205,30 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
                                             />
                                         </div>
                                         <div className="flex items-center justify-between">
-                                            <button
-                                                onClick={e => handleDelete(status.id, e)}
-                                                className="text-[10px] text-red-500 hover:text-red-700 flex items-center gap-0.5 px-1.5 py-1 rounded hover:bg-red-50 transition-colors"
-                                            >
-                                                <Trash2 size={11} /> 刪除
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={e => handleDelete(status.id, e)}
+                                                    className="text-[10px] text-red-500 hover:text-red-700 flex items-center gap-0.5 px-1.5 py-1 rounded hover:bg-red-50 transition-colors"
+                                                >
+                                                    <Trash2 size={11} /> 刪除
+                                                </button>
+                                                <button
+                                                    onClick={e => {
+                                                        e.stopPropagation();
+                                                        const updated = statusConfigs.map(s =>
+                                                            s.id === status.id ? { ...s, isDone: !s.isDone } : s
+                                                        );
+                                                        onUpdateStatuses(updated);
+                                                    }}
+                                                    className={`text-[10px] px-1.5 py-1 rounded flex items-center gap-0.5 transition-colors ${status.isDone
+                                                        ? 'bg-green-600 text-white'
+                                                        : 'text-gray-400 hover:text-green-600 hover:bg-green-50 border border-gray-200'
+                                                        }`}
+                                                    title="標記為完成狀態（選擇後項目移入垃圾桶）"
+                                                >
+                                                    <Check size={11} /> {status.isDone ? '完成態' : '設完成'}
+                                                </button>
+                                            </div>
                                             <div className="flex items-center gap-1">
                                                 <button
                                                     onClick={cancelEdit}

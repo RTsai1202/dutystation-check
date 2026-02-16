@@ -31,11 +31,9 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import {
   Calendar,
-  ClipboardCheck,
   FileText,
   AlertCircle,
   Clock,
-  Settings,
   Plus,
   Trash2,
   Edit2,
@@ -43,7 +41,6 @@ import {
   RefreshCw,
   ExternalLink,
   ChevronRight,
-  Palette,
   X,
   RotateCcw,
   Archive,
@@ -82,10 +79,8 @@ const App: React.FC = () => {
   const [currentDate, setCurrentDate] = useState('');
 
   // --- UI State ---
-  const [isEditMode, setIsEditMode] = useState(true);
   const [selectedShiftId, setSelectedShiftId] = useState('');
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [showStatusManager, setShowStatusManager] = useState(false);
   const [workRecords, setWorkRecords] = useState<WorkRecord[]>([]);
   const [workRecordGroups, setWorkRecordGroups] = useState<WorkRecordGroup[]>([]);
   const [showWorkRecordModal, setShowWorkRecordModal] = useState(false);
@@ -416,77 +411,16 @@ const App: React.FC = () => {
               <span>{currentDate}</span>
             </div>
 
-            <button
-              onClick={() => setIsEditMode(!isEditMode)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium border ${isEditMode ? 'bg-orange-100 border-orange-200 text-orange-700' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
-                }`}
-            >
-              <Settings className={`w-4 h-4 ${isEditMode ? 'animate-spin' : ''}`} />
-              {isEditMode ? '結束修改' : '修改模式'}
-            </button>
 
-            {isEditMode && (
-              <button
-                onClick={() => setShowStatusManager(!showStatusManager)}
-                className={`p-2 rounded-lg transition-colors ${showStatusManager ? 'bg-purple-100 text-purple-700' : 'text-gray-500 hover:bg-gray-100'}`}
-                title="狀態管理"
-              >
-                <Palette size={18} />
-              </button>
-            )}
           </div>
         </div>
       </header>
 
       <main className="w-full max-w-[98%] mx-auto px-4 py-6 space-y-6">
-        {isEditMode && showStatusManager && (
-          <div className="bg-white p-6 rounded-xl shadow-md border border-purple-100 space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <Palette className="text-purple-500" /> 狀態定義管理
-              </h3>
-              <button
-                onClick={() => setStatusConfigs([...statusConfigs, { id: `status_${Date.now()}`, label: '新狀態', color: '#64748b' }])}
-                className="bg-purple-600 text-white px-3 py-1.5 rounded-lg text-xs flex items-center gap-1"
-              >
-                <Plus size={14} /> 新增狀態
-              </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {statusConfigs.map((status, idx) => (
-                <div key={status.id} className={`flex items-center gap-2 p-3 rounded-lg border ${status.isDone ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
-                  <input
-                    type="color"
-                    value={status.color}
-                    onChange={(e) => setStatusConfigs(statusConfigs.map(s => s.id === status.id ? { ...s, color: e.target.value } : s))}
-                    className="w-8 h-8 rounded border-none cursor-pointer p-0 overflow-hidden"
-                  />
-                  <input
-                    className="flex-grow bg-transparent border-none focus:ring-0 text-sm font-medium"
-                    value={status.label}
-                    onChange={(e) => setStatusConfigs(statusConfigs.map(s => s.id === status.id ? { ...s, label: e.target.value } : s))}
-                  />
-                  <button
-                    onClick={() => setStatusConfigs(statusConfigs.map(s => s.id === status.id ? { ...s, isDone: !s.isDone } : s))}
-                    className={`text-[10px] px-2 py-1 rounded-md font-bold border transition-colors ${status.isDone ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-400 border-gray-300 hover:border-green-400 hover:text-green-600'}`}
-                    title="標記為完成狀態（選擇後項目會自動隱藏）"
-                  >
-                    <Check size={12} />
-                  </button>
-                  <button
-                    onClick={() => setStatusConfigs(statusConfigs.filter(s => s.id !== status.id))}
-                    className="text-gray-400 hover:text-red-500"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+
 
         <DndContext
-          sensors={isEditMode ? sensors : []}
+          sensors={sensors}
           collisionDetection={pointerWithin}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
@@ -498,7 +432,7 @@ const App: React.FC = () => {
                 section={section}
                 isActive={selectedShiftId === section.id}
                 onClick={() => setSelectedShiftId(section.id)}
-                isEditMode={isEditMode}
+                isEditMode={true}
               />
             ))}
           </div>
@@ -528,7 +462,7 @@ const App: React.FC = () => {
               title="基本事項"
               icon={<AlertCircle className="w-5 h-5 text-yellow-400" />}
               color="bg-gray-800"
-              showAdd={isEditMode}
+              showAdd={true}
               onAdd={() => handleAddTask('basic')}
               items={visibleBasicTasks}
             >
@@ -537,7 +471,7 @@ const App: React.FC = () => {
                   key={task.id}
                   task={task}
                   sectionId="basic"
-                  isEditMode={isEditMode}
+                  isEditMode={true}
                   isChecked={!!checkedItems[getNamespacedId(selectedShiftId, task.id)]}
                   onToggle={() => handleToggle(getNamespacedId(selectedShiftId, task.id))}
                   isEditing={editingTaskId === task.id}
@@ -553,7 +487,7 @@ const App: React.FC = () => {
               title={activeShiftData?.title || '值班項目'}
               icon={<Clock className="w-5 h-5 text-white/90" />}
               color={activeShiftData?.colorClass || 'bg-blue-600'}
-              showAdd={isEditMode}
+              showAdd={true}
               onAdd={() => activeShiftData && handleAddTask(activeShiftData.id)}
               items={activeShiftData?.tasks || []}
             >
@@ -562,7 +496,7 @@ const App: React.FC = () => {
                   key={task.id}
                   task={task}
                   sectionId={activeShiftData.id}
-                  isEditMode={isEditMode}
+                  isEditMode={true}
                   isChecked={!!checkedItems[task.id]}
                   onToggle={() => handleToggle(task.id)}
                   isEditing={editingTaskId === task.id}
@@ -596,7 +530,7 @@ const App: React.FC = () => {
                   key={item.id}
                   task={item}
                   sectionId="handover"
-                  isEditMode={isEditMode}
+                  isEditMode={true}
                   isEditing={editingTaskId === item.id}
                   setEditing={() => setEditingTaskId(editingTaskId === item.id ? null : item.id)}
                   onDelete={() => handleDeleteTask(item.id, 'handover')}
