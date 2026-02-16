@@ -35,3 +35,6 @@ lerna-debug.log*
 
 # TypeScript 暫存
 *.tsbuildinfo
+
+# Claude Code
+CLAUDE.md
