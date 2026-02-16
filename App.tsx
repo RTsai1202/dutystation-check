@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { BASIC_TASKS as INITIAL_BASIC_TASKS, SHIFT_SECTIONS as INITIAL_SHIFT_SECTIONS } from './constants';
 import { CheckboxItem } from './components/CheckboxItem';
 import { StatusDropdown } from './components/StatusDropdown';
@@ -639,7 +640,211 @@ const ShiftTabDroppable: React.FC<{
   );
 };
 
-// --- Sortable Task Wrapper ---
+// --- Context Menu ---
+const ContextMenu: React.FC<{
+  x: number;
+  y: number;
+  onEdit: () => void;
+  onDelete: () => void;
+  onClose: () => void;
+}> = ({ x, y, onEdit, onDelete, onClose }) => {
+  React.useEffect(() => {
+    const handleClick = () => onClose();
+    const handleScroll = () => onClose();
+    document.addEventListener('click', handleClick);
+    document.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('click', handleClick);
+      document.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [onClose]);
+
+  // Ensure menu stays within viewport
+  const style: React.CSSProperties = {
+    position: 'fixed',
+    left: Math.min(x, window.innerWidth - 160),
+    top: Math.min(y, window.innerHeight - 100),
+    zIndex: 9999,
+  };
+
+  return ReactDOM.createPortal(
+    <div style={style} className="bg-white rounded-xl shadow-2xl border border-gray-200 py-1.5 min-w-[140px] animate-in fade-in zoom-in-95 duration-150" onClick={e => e.stopPropagation()}>
+      <button
+        onClick={(e) => { e.stopPropagation(); onEdit(); onClose(); }}
+        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+      >
+        <Edit2 size={14} /> 編輯
+      </button>
+      <div className="border-t border-gray-100 mx-2" />
+      <button
+        onClick={(e) => { e.stopPropagation(); onDelete(); onClose(); }}
+        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+      >
+        <Trash2 size={14} /> 刪除
+      </button>
+    </div>,
+    document.body
+  );
+};
+
+// --- Header with Right-Click Context Menu ---
+const HeaderWithContextMenu: React.FC<{
+  task: any;
+  dragHandleProps?: any;
+  onEdit: () => void;
+  onDelete: () => void;
+}> = ({ task, dragHandleProps, onEdit, onDelete }) => {
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+  return (
+    <>
+      <div
+        className="mt-4 mb-2 group flex items-center gap-2"
+        onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY }); }}
+      >
+        <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none">
+          <GripVertical size={16} />
+        </div>
+        <h4 className="font-bold text-gray-800 flex items-center gap-2">
+          <span className="w-1 h-4 bg-gray-500 rounded-full"></span>
+          {task.label}
+        </h4>
+      </div>
+      {ctxMenu && <ContextMenu x={ctxMenu.x} y={ctxMenu.y} onEdit={onEdit} onDelete={onDelete} onClose={() => setCtxMenu(null)} />}
+    </>
+  );
+};
+
+// --- Edit Mode Task with Checkbox + Right-Click ---
+const EditModeTask: React.FC<{
+  task: any;
+  isChecked?: boolean;
+  onToggle?: () => void;
+  dragHandleProps?: any;
+  onEdit: () => void;
+  onDelete: () => void;
+}> = ({ task, isChecked, onToggle, dragHandleProps, onEdit, onDelete }) => {
+  const [justChecked, setJustChecked] = useState(false);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+
+  const handleCheckboxClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isChecked && onToggle) {
+      setJustChecked(true);
+      setTimeout(() => setJustChecked(false), 700);
+    }
+    onToggle?.();
+  };
+
+  return (
+    <>
+      <div
+        className={`group flex items-start gap-3 p-3 rounded-lg border transition-all duration-200 relative overflow-hidden ${isChecked
+          ? 'bg-blue-50 border-blue-200 shadow-sm'
+          : 'bg-white border-gray-100 hover:border-gray-300 hover:bg-gray-50'
+          }`}
+        onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY }); }}
+      >
+        {/* Dopamine ripple */}
+        {justChecked && <div className="dopamine-ripple" />}
+        {justChecked && (
+          <>
+            <div className="sparkle sparkle-1" />
+            <div className="sparkle sparkle-2" />
+            <div className="sparkle sparkle-3" />
+            <div className="sparkle sparkle-4" />
+            <div className="sparkle sparkle-5" />
+            <div className="sparkle sparkle-6" />
+          </>
+        )}
+
+        {/* Drag handle */}
+        <div {...dragHandleProps} className="flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none" onClick={e => e.stopPropagation()}>
+          <GripVertical size={16} />
+        </div>
+
+        {/* Checkbox - only this toggles */}
+        <div
+          onClick={handleCheckboxClick}
+          className={`
+            flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center cursor-pointer
+            transition-all duration-200 relative z-10
+            ${isChecked
+              ? 'bg-blue-600 border-blue-600 shadow-md shadow-blue-300/50'
+              : 'border-gray-300 group-hover:border-blue-400 hover:scale-110'}
+            ${justChecked ? 'checkbox-pop' : ''}
+          `}
+        >
+          {isChecked && (
+            <Check size={16} className={`text-white ${justChecked ? 'check-draw' : ''}`} strokeWidth={3} />
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="flex-grow min-w-0">
+          <div className={`text-base leading-snug select-none ${isChecked ? 'text-gray-800 font-medium' : 'text-gray-600'}`}>
+            {task.label}
+          </div>
+          {task.subtext && <div className="text-xs text-gray-500 mt-1">{task.subtext}</div>}
+          {(task.showOnDays?.length || task.showInMonths?.length) && (
+            <div className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
+              <Calendar size={10} />
+              {task.showOnDays?.length ? `每週${task.showOnDays.map((d: number) => ['日', '一', '二', '三', '四', '五', '六'][d]).join('、')}` : ''}
+              {task.showOnDays?.length && task.showInMonths?.length ? ' · ' : ''}
+              {task.showInMonths?.length ? `${task.showInMonths.join(',')}月` : ''}
+            </div>
+          )}
+        </div>
+
+        {/* External link icon - pushed to the right */}
+        {task.link && (
+          <a
+            href={task.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex-shrink-0 text-gray-400 hover:text-blue-600 p-1.5 ml-2 rounded-md hover:bg-blue-50 transition-colors"
+            title="開啟連結"
+          >
+            <ExternalLink size={16} />
+          </a>
+        )}
+      </div>
+      {ctxMenu && <ContextMenu x={ctxMenu.x} y={ctxMenu.y} onEdit={onEdit} onDelete={onDelete} onClose={() => setCtxMenu(null)} />}
+
+      {/* Shared dopamine animation styles */}
+      <style>{`
+        .dopamine-ripple {
+          position: absolute;
+          left: 12px; top: 12px;
+          width: 10px; height: 10px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(59,130,246,0.4), rgba(147,51,234,0.2), transparent 70%);
+          animation: rippleExpand 0.6s cubic-bezier(0.25,0.46,0.45,0.94) forwards;
+          pointer-events: none; z-index: 0;
+        }
+        @keyframes rippleExpand { 0% { transform: scale(0); opacity: 1; } 100% { transform: scale(40); opacity: 0; } }
+        .checkbox-pop { animation: popBounce 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+        @keyframes popBounce { 0% { transform: scale(1); } 30% { transform: scale(1.4); } 50% { transform: scale(0.9); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+        .check-draw { animation: drawCheck 0.3s ease-out 0.1s both; }
+        @keyframes drawCheck { 0% { opacity: 0; transform: scale(0) rotate(-45deg); } 60% { opacity: 1; transform: scale(1.2) rotate(0deg); } 100% { opacity: 1; transform: scale(1) rotate(0deg); } }
+        .sparkle { position: absolute; width: 6px; height: 6px; border-radius: 50%; pointer-events: none; z-index: 5; }
+        .sparkle-1 { background: #fbbf24; left: 18px; top: 8px; animation: sp1 0.6s cubic-bezier(0.25,0.46,0.45,0.94) forwards; }
+        .sparkle-2 { background: #a78bfa; left: 10px; top: 6px; animation: sp2 0.5s cubic-bezier(0.25,0.46,0.45,0.94) 0.05s forwards; }
+        .sparkle-3 { background: #34d399; left: 22px; top: 18px; animation: sp3 0.55s cubic-bezier(0.25,0.46,0.45,0.94) 0.1s forwards; }
+        .sparkle-4 { background: #f472b6; left: 6px; top: 20px; animation: sp4 0.6s cubic-bezier(0.25,0.46,0.45,0.94) 0.08s forwards; }
+        .sparkle-5 { background: #60a5fa; left: 26px; top: 12px; animation: sp5 0.5s cubic-bezier(0.25,0.46,0.45,0.94) 0.12s forwards; }
+        .sparkle-6 { background: #fb923c; left: 14px; top: 24px; animation: sp6 0.55s cubic-bezier(0.25,0.46,0.45,0.94) 0.03s forwards; }
+        @keyframes sp1 { 0% { transform: translate(0,0) scale(0); opacity: 1; } 100% { transform: translate(20px,-18px) scale(1.5); opacity: 0; } }
+        @keyframes sp2 { 0% { transform: translate(0,0) scale(0); opacity: 1; } 100% { transform: translate(-16px,-20px) scale(1.2); opacity: 0; } }
+        @keyframes sp3 { 0% { transform: translate(0,0) scale(0); opacity: 1; } 100% { transform: translate(22px,14px) scale(1.3); opacity: 0; } }
+        @keyframes sp4 { 0% { transform: translate(0,0) scale(0); opacity: 1; } 100% { transform: translate(-18px,16px) scale(1.1); opacity: 0; } }
+        @keyframes sp5 { 0% { transform: translate(0,0) scale(0); opacity: 1; } 100% { transform: translate(24px,-6px) scale(1.4); opacity: 0; } }
+        @keyframes sp6 { 0% { transform: translate(0,0) scale(0); opacity: 1; } 100% { transform: translate(-12px,20px) scale(1); opacity: 0; } }
+      `}</style>
+    </>
+  );
+};
+
 const SortableTask: React.FC<any> = (props) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.task.id, disabled: !props.isEditMode });
   const style = {
@@ -741,69 +946,23 @@ const EditableTask: React.FC<{
   if (isEditMode && !isHandover) {
     if (task.isHeader) {
       return (
-        <div className="mt-4 mb-2 group flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none">
-              <GripVertical size={16} />
-            </div>
-            <h4 className="font-bold text-gray-800 flex items-center gap-2">
-              <span className="w-1 h-4 bg-gray-500 rounded-full"></span>
-              {task.label}
-            </h4>
-          </div>
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button onClick={setEditing} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-md" title="編輯內容"><Edit2 size={14} /></button>
-            <button onClick={onDelete} className="p-1.5 text-red-500 hover:bg-red-50 rounded-md" title="刪除"><Trash2 size={14} /></button>
-          </div>
-        </div>
+        <HeaderWithContextMenu
+          task={task}
+          dragHandleProps={dragHandleProps}
+          onEdit={setEditing}
+          onDelete={onDelete}
+        />
       );
     }
     return (
-      <div
-        className={`group flex items-start gap-3 p-3 rounded-lg border transition-all duration-200 cursor-pointer ${isChecked
-          ? 'bg-blue-50 border-blue-200 shadow-sm'
-          : 'bg-white border-gray-100 hover:border-gray-300 hover:bg-gray-50'
-          }`}
-        onClick={onToggle}
-      >
-        <div {...dragHandleProps} className="flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none" onClick={e => e.stopPropagation()}>
-          <GripVertical size={16} />
-        </div>
-        <div className={`flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center transition-colors duration-200 ${isChecked ? 'bg-blue-600 border-blue-600' : 'border-gray-300 group-hover:border-blue-400'
-          }`}>
-          {isChecked && <Check size={16} className="text-white" strokeWidth={3} />}
-        </div>
-        <div className="flex-grow">
-          <div className={`text-base leading-snug select-none ${isChecked ? 'text-gray-800 font-medium' : 'text-gray-600'}`}>
-            {task.label}
-          </div>
-          {task.subtext && <div className="text-xs text-gray-500 mt-1">{task.subtext}</div>}
-          {(task.showOnDays?.length || task.showInMonths?.length) && (
-            <div className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
-              <Calendar size={10} />
-              {task.showOnDays?.length ? `每週${task.showOnDays.map((d: number) => ['日', '一', '二', '三', '四', '五', '六'][d]).join('、')}` : ''}
-              {task.showOnDays?.length && task.showInMonths?.length ? ' · ' : ''}
-              {task.showInMonths?.length ? `${task.showInMonths.join(',')}月` : ''}
-            </div>
-          )}
-        </div>
-        {task.link && (
-          <a
-            href={task.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="flex-shrink-0 text-gray-400 hover:text-blue-600 p-1"
-            title="開啟連結"
-          >
-            <ExternalLink size={16} />
-          </a>
-        )}
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-          <button onClick={setEditing} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-md" title="編輯內容"><Edit2 size={14} /></button>
-          <button onClick={onDelete} className="p-1.5 text-red-500 hover:bg-red-50 rounded-md" title="刪除"><Trash2 size={14} /></button>
-        </div>
-      </div>
+      <EditModeTask
+        task={task}
+        isChecked={isChecked}
+        onToggle={onToggle}
+        dragHandleProps={dragHandleProps}
+        onEdit={setEditing}
+        onDelete={onDelete}
+      />
     );
   }
 
