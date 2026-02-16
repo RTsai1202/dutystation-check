@@ -568,13 +568,29 @@ const WorkRecordModal: React.FC<{
         const overId = over.id as string;
 
         // --- Section reorder ---
-        if (activeId.startsWith('section_') && overId.startsWith('section_')) {
+        if (activeId.startsWith('section_')) {
+            // Resolve target group from various over element types
+            let targetGroupId: string | null = null;
+            if (overId.startsWith('section_')) {
+                targetGroupId = overId.replace('section_', '');
+            } else if (overId.startsWith('group_')) {
+                targetGroupId = overId.replace('group_', '');
+            } else {
+                // over is a record item — find its group
+                const overRecord = records.find(r => r.id === overId);
+                if (overRecord) {
+                    targetGroupId = overRecord.groupId && groups.find(g => g.id === overRecord.groupId)
+                        ? overRecord.groupId
+                        : '__uncategorized__';
+                }
+            }
+
             const activeGroupId = activeId.replace('section_', '');
-            const overGroupId = overId.replace('section_', '');
-            if (activeGroupId === '__uncategorized__' || overGroupId === '__uncategorized__') return;
+            if (!targetGroupId || activeGroupId === '__uncategorized__' || targetGroupId === '__uncategorized__') return;
+            if (activeGroupId === targetGroupId) return;
 
             const oldIdx = groups.findIndex(g => g.id === activeGroupId);
-            const overIdx = groups.findIndex(g => g.id === overGroupId);
+            const overIdx = groups.findIndex(g => g.id === targetGroupId);
             if (oldIdx !== -1 && overIdx !== -1) {
                 onUpdateGroups(arrayMove(groups, oldIdx, overIdx));
             }
