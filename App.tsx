@@ -6,7 +6,7 @@ import { CheckboxItem } from './components/CheckboxItem';
 import { StatusDropdown } from './components/StatusDropdown';
 import ScheduleEditor from './components/ScheduleEditor';
 import WorkRecordModal from './components/WorkRecordModal';
-import { TaskItem, ShiftSection, HandoverItem, StatusConfig, WorkRecord } from './types';
+import { TaskItem, ShiftSection, HandoverItem, StatusConfig, WorkRecord, WorkRecordGroup, TrashedItem } from './types';
 import {
   DndContext,
   DragOverlay,
@@ -46,12 +46,18 @@ import {
   Palette,
   X,
   RotateCcw,
+  Archive,
+  ChevronDown,
+  ChevronUp,
   GripVertical,
 } from 'lucide-react';
 
 const STORAGE_STATE_KEY = 'duty_station_state_v2';
 const STORAGE_CONFIG_KEY = 'duty_station_config_v2';
 const STORAGE_WORK_RECORDS_KEY = 'duty_station_work_records';
+const STORAGE_WORK_RECORD_GROUPS_KEY = 'duty_station_work_record_groups';
+const STORAGE_TRASH_KEY = 'duty_station_trash';
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 const DEFAULT_STATUSES: StatusConfig[] = [
   { id: 'status_pending', label: '待處理', color: '#94a3b8' },
@@ -81,7 +87,10 @@ const App: React.FC = () => {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [showStatusManager, setShowStatusManager] = useState(false);
   const [workRecords, setWorkRecords] = useState<WorkRecord[]>([]);
+  const [workRecordGroups, setWorkRecordGroups] = useState<WorkRecordGroup[]>([]);
   const [showWorkRecordModal, setShowWorkRecordModal] = useState(false);
+  const [trashedItems, setTrashedItems] = useState<TrashedItem[]>([]);
+  const [showTrash, setShowTrash] = useState(false);
 
   // --- Initial Load ---
   useEffect(() => {
@@ -109,6 +118,21 @@ const App: React.FC = () => {
     const savedRecords = localStorage.getItem(STORAGE_WORK_RECORDS_KEY);
     if (savedRecords) {
       try { setWorkRecords(JSON.parse(savedRecords)); } catch (e) { }
+    }
+
+    const savedGroups = localStorage.getItem(STORAGE_WORK_RECORD_GROUPS_KEY);
+    if (savedGroups) {
+      try { setWorkRecordGroups(JSON.parse(savedGroups)); } catch (e) { }
+    }
+
+    // Load trash and auto-clean items older than 30 days
+    const savedTrash = localStorage.getItem(STORAGE_TRASH_KEY);
+    if (savedTrash) {
+      try {
+        const parsed: TrashedItem[] = JSON.parse(savedTrash);
+        const now = Date.now();
+        setTrashedItems(parsed.filter(item => (now - item.trashedAt) < THIRTY_DAYS_MS));
+      } catch (e) { }
     }
 
     const updateTime = () => {
@@ -145,6 +169,15 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(STORAGE_WORK_RECORDS_KEY, JSON.stringify(workRecords));
   }, [workRecords]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_WORK_RECORD_GROUPS_KEY, JSON.stringify(workRecordGroups));
+  }, [workRecordGroups]);
+
+  useEffect(() => {
+    if (!configLoaded.current) return;
+    localStorage.setItem(STORAGE_TRASH_KEY, JSON.stringify(trashedItems));
+  }, [trashedItems]);
 
   // --- Helper: Check if task should be visible based on day/month ---
   const isTaskVisible = (task: TaskItem): boolean => {
@@ -218,9 +251,34 @@ const App: React.FC = () => {
   };
 
   const setHandoverStatus = (taskId: string, statusId: string) => {
-    setHandoverItems(prev => prev.map(item =>
-      item.id === taskId ? { ...item, statusId } : item
-    ));
+    const targetStatus = statusConfigs.find(s => s.id === statusId);
+    if (targetStatus?.isDone) {
+      // Move to trash instead of just hiding
+      const item = handoverItems.find(i => i.id === taskId);
+      if (item) {
+        setTrashedItems(prev => [{ ...item, statusId, trashedAt: Date.now() }, ...prev]);
+        setHandoverItems(prev => prev.filter(i => i.id !== taskId));
+      }
+    } else {
+      setHandoverItems(prev => prev.map(item =>
+        item.id === taskId ? { ...item, statusId } : item
+      ));
+    }
+  };
+
+  const restoreFromTrash = (itemId: string) => {
+    const item = trashedItems.find(i => i.id === itemId);
+    if (!item) return;
+    const firstNonDoneStatus = statusConfigs.find(s => !s.isDone);
+    const { trashedAt, ...handoverItem } = item;
+    setHandoverItems(prev => [{ ...handoverItem, statusId: firstNonDoneStatus?.id || statusConfigs[0]?.id || '' }, ...prev]);
+    setTrashedItems(prev => prev.filter(i => i.id !== itemId));
+  };
+
+  const clearTrash = () => {
+    if (window.confirm('確定要清空垃圾桶嗎？此操作無法復原。')) {
+      setTrashedItems([]);
+    }
   };
 
   // --- DnD Setup ---
@@ -522,35 +580,87 @@ const App: React.FC = () => {
               color="bg-indigo-600"
               showAdd={true}
               onAdd={() => handleAddTask('handover')}
-              items={handoverItems.filter(item => { const status = statusConfigs.find(s => s.id === item.statusId); return !status?.isDone; })}
+              items={handoverItems}
+              headerExtra={
+                <button
+                  onClick={() => setShowTrash(!showTrash)}
+                  className={`bg-white/20 hover:bg-white/30 p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold ${showTrash ? 'bg-white/30' : ''}`}
+                  title="垃圾桶"
+                >
+                  <Trash2 size={14} />
+                </button>
+              }
             >
-              {handoverItems
-                .filter(item => {
-                  const status = statusConfigs.find(s => s.id === item.statusId);
-                  return !status?.isDone;
-                })
-                .map(item => (
-                  <SortableTask
-                    key={item.id}
-                    task={item}
-                    sectionId="handover"
-                    isEditMode={isEditMode}
-                    isEditing={editingTaskId === item.id}
-                    setEditing={() => setEditingTaskId(editingTaskId === item.id ? null : item.id)}
-                    onDelete={() => handleDeleteTask(item.id, 'handover')}
-                    onUpdate={(upd) => handleUpdateTask(item.id, 'handover', upd)}
-                    statusConfigs={statusConfigs}
-                    onSelectStatus={(statusId: string) => setHandoverStatus(item.id, statusId)}
-                    onUpdateStatuses={setStatusConfigs}
-                    isHandover
-                  />
-                ))}
-              {handoverItems.filter(item => {
-                const status = statusConfigs.find(s => s.id === item.statusId);
-                return !status?.isDone;
-              }).length === 0 && (
-                  <div className="text-center py-10 text-gray-400 text-sm italic">目前無待辦交接事項</div>
-                )}
+              {handoverItems.map(item => (
+                <SortableTask
+                  key={item.id}
+                  task={item}
+                  sectionId="handover"
+                  isEditMode={isEditMode}
+                  isEditing={editingTaskId === item.id}
+                  setEditing={() => setEditingTaskId(editingTaskId === item.id ? null : item.id)}
+                  onDelete={() => handleDeleteTask(item.id, 'handover')}
+                  onUpdate={(upd) => handleUpdateTask(item.id, 'handover', upd)}
+                  statusConfigs={statusConfigs}
+                  onSelectStatus={(statusId: string) => setHandoverStatus(item.id, statusId)}
+                  onUpdateStatuses={setStatusConfigs}
+                  isHandover
+                />
+              ))}
+              {handoverItems.length === 0 && (
+                <div className="text-center py-10 text-gray-400 text-sm italic">目前無待辦交接事項</div>
+              )}
+
+              {/* Trash Panel */}
+              {showTrash && (
+                <div className="mt-4 border-t-2 border-dashed border-gray-200 pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <Trash2 size={16} className="text-gray-400" />
+                      <span className="text-sm font-bold">垃圾桶</span>
+                      <span className="text-xs text-gray-400">（{trashedItems.length} 項，30 天自動清空）</span>
+                    </div>
+                    {trashedItems.length > 0 && (
+                      <button
+                        onClick={clearTrash}
+                        className="text-xs text-red-400 hover:text-red-600 hover:bg-red-50 px-2.5 py-1.5 rounded-lg transition-colors font-medium flex items-center gap-1"
+                      >
+                        <Trash2 size={12} /> 清空
+                      </button>
+                    )}
+                  </div>
+                  {trashedItems.length === 0 ? (
+                    <div className="text-center py-6 text-gray-300 text-sm italic">垃圾桶是空的</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {trashedItems.map(item => {
+                        const daysLeft = Math.max(0, Math.ceil((THIRTY_DAYS_MS - (Date.now() - item.trashedAt)) / (24 * 60 * 60 * 1000)));
+                        const trashedDate = new Date(item.trashedAt).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' });
+                        return (
+                          <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100 group hover:bg-gray-100 transition-colors">
+                            <div className="flex-grow min-w-0">
+                              <div className="text-sm text-gray-500 line-through truncate">{item.label}</div>
+                              {item.subtext && <div className="text-[11px] text-gray-400 truncate mt-0.5">{item.subtext}</div>}
+                              <div className="text-[10px] text-gray-400 mt-1 flex items-center gap-2">
+                                <span>{trashedDate} 完成</span>
+                                <span>·</span>
+                                <span className={daysLeft <= 7 ? 'text-red-400' : ''}>{daysLeft} 天後自動清除</span>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => restoreFromTrash(item.id)}
+                              className="flex-shrink-0 text-xs text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 px-2.5 py-1.5 rounded-lg transition-colors font-medium flex items-center gap-1 opacity-0 group-hover:opacity-100"
+                              title="還原"
+                            >
+                              <RotateCcw size={12} /> 還原
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </DroppableSection>
           </div>
 
@@ -569,6 +679,8 @@ const App: React.FC = () => {
           onClose={() => setShowWorkRecordModal(false)}
           records={workRecords}
           onUpdateRecords={setWorkRecords}
+          groups={workRecordGroups}
+          onUpdateGroups={setWorkRecordGroups}
         />
       </main>
     </div>
@@ -585,7 +697,8 @@ const DroppableSection: React.FC<{
   showAdd: boolean;
   onAdd: () => void;
   items: TaskItem[];
-}> = ({ id, title, icon, color, children, showAdd, onAdd, items }) => {
+  headerExtra?: React.ReactNode;
+}> = ({ id, title, icon, color, children, showAdd, onAdd, items, headerExtra }) => {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
     <SortableContext items={items.map(t => t.id)} strategy={verticalListSortingStrategy}>
@@ -599,11 +712,14 @@ const DroppableSection: React.FC<{
             {icon}
             <h2 className="text-lg font-bold">{title}</h2>
           </div>
-          {showAdd && (
-            <button onClick={onAdd} className="bg-white/20 hover:bg-white/30 p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold">
-              <Plus size={14} /> 新增
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {headerExtra}
+            {showAdd && (
+              <button onClick={onAdd} className="bg-white/20 hover:bg-white/30 p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold">
+                <Plus size={14} /> 新增
+              </button>
+            )}
+          </div>
         </div>
         <div className="p-4 space-y-3 flex-grow overflow-y-auto">
           {children}

@@ -28,10 +28,20 @@ export interface ShiftSection {
   tasks: TaskItem[];
 }
 
+export interface TrashedItem extends HandoverItem {
+  trashedAt: number; // Unix milliseconds timestamp
+}
+
+export interface WorkRecordGroup {
+  id: string;
+  title: string;
+}
+
 export interface WorkRecord {
   id: string;
   title: string;
   content: string;
+  groupId?: string; // 所屬群組 ID，undefined 表示「未分類」
 }
 
 export interface AppState {
