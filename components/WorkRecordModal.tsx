@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     DndContext,
@@ -21,18 +22,20 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
-    X,
-    Plus,
     Edit2,
     Trash2,
-    GripVertical,
-    Check,
+    Plus,
     Copy,
-    FileText,
+    Check,
+    X,
     FolderPlus,
+    GripVertical,
+    GripHorizontal,
     ChevronDown,
     ChevronRight,
-    GripHorizontal,
+    FileText,
+    Link as LinkIcon,
+    ExternalLink,
 } from 'lucide-react';
 import { WorkRecord, WorkRecordGroup } from '../types';
 
@@ -120,23 +123,28 @@ const SortableRecordItem: React.FC<{
             {/* Main clickable area */}
             <button
                 onClick={() => onCopy(record)}
-                className={`flex-grow text-left px-3 py-2.5 rounded-xl border-2 transition-all duration-300 min-w-0 ${isCopied
+                className={`flex - grow text - left px - 3 py - 2.5 rounded - xl border - 2 transition - all duration - 300 min - w - 0 ${isCopied
                     ? 'bg-green-50 border-green-400 shadow-lg shadow-green-100 scale-[1.02]'
                     : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-md active:scale-[0.98]'
-                    }`}
+                    } `}
             >
                 <div className="flex items-center justify-between gap-2">
-                    <span className={`font-medium text-sm truncate transition-colors ${isCopied ? 'text-green-700' : 'text-gray-800'}`}>
+                    <span className={`font - medium text - sm truncate transition - colors ${isCopied ? 'text-green-700' : 'text-gray-800'} `}>
                         {record.title || '未命名'}
                     </span>
-                    {isCopied ? (
-                        <span className="flex items-center gap-1 text-green-600 text-xs font-bold animate-bounce-in flex-shrink-0">
-                            <Check size={14} strokeWidth={3} />
-                            已複製
-                        </span>
-                    ) : (
-                        <Copy size={14} className="text-gray-300 group-hover:text-blue-400 transition-colors flex-shrink-0" />
-                    )}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                        {record.link && !isCopied && (
+                            <LinkIcon size={12} className="text-blue-400" />
+                        )}
+                        {isCopied ? (
+                            <span className="flex items-center gap-1 text-green-600 text-xs font-bold animate-bounce-in">
+                                <Check size={14} strokeWidth={3} />
+                                已複製
+                            </span>
+                        ) : (
+                            <Copy size={14} className="text-gray-300 group-hover:text-blue-400 transition-colors" />
+                        )}
+                    </div>
                 </div>
             </button>
 
@@ -179,7 +187,7 @@ const SortableSectionHeader: React.FC<{
         transition,
         isDragging,
     } = useSortable({
-        id: `section_${group.id}`,
+        id: `section_${group.id} `,
         disabled: isUncategorized,
     });
 
@@ -231,7 +239,7 @@ const SortableSectionHeader: React.FC<{
                     />
                 ) : (
                     <span
-                        className={`flex-grow text-base font-bold ${isUncategorized ? 'text-gray-500' : 'text-gray-800 cursor-pointer hover:text-blue-600'} transition-colors`}
+                        className={`flex - grow text - base font - bold ${isUncategorized ? 'text-gray-500' : 'text-gray-800 cursor-pointer hover:text-blue-600'} transition - colors`}
                         onDoubleClick={() => { if (!isUncategorized) { setRenameValue(group.title); setIsRenaming(true); } }}
                     >
                         {group.title}
@@ -268,22 +276,22 @@ const SectionContent: React.FC<{
     copiedId: string | null;
     collapsed: boolean;
 }> = ({ groupId, records, onCopy, onEdit, onDelete, onAddRecord, copiedId, collapsed }) => {
-    const { setNodeRef, isOver } = useDroppable({ id: `group_${groupId}` });
+    const { setNodeRef, isOver } = useDroppable({ id: `group_${groupId} ` });
 
     if (collapsed) return null;
 
     return (
         <div
             ref={setNodeRef}
-            className={`pl-6 pb-4 transition-all duration-200 ${isOver ? 'bg-blue-50/40 rounded-xl' : ''}`}
+            className={`pl - 6 pb - 4 transition - all duration - 200 ${isOver ? 'bg-blue-50/40 rounded-xl' : ''} `}
         >
             {records.length === 0 ? (
                 <div
                     onClick={() => onAddRecord(groupId)}
-                    className={`text-center py-4 text-sm italic rounded-xl border-2 border-dashed transition-colors cursor-pointer group/empty ${isOver ? 'text-blue-400 border-blue-300 bg-blue-50' : 'text-gray-300 border-gray-200 hover:text-blue-400 hover:border-blue-300 hover:bg-blue-50/50'}`}
+                    className={`text - center py - 4 text - sm italic rounded - xl border - 2 border - dashed transition - colors cursor - pointer group / empty ${isOver ? 'text-blue-400 border-blue-300 bg-blue-50' : 'text-gray-300 border-gray-200 hover:text-blue-400 hover:border-blue-300 hover:bg-blue-50/50'} `}
                 >
                     <div className="flex items-center justify-center gap-1.5">
-                        <Plus size={16} className={`transition-transform group-hover/empty:scale-110 ${isOver ? 'text-blue-400' : ''}`} />
+                        <Plus size={16} className={`transition - transform group - hover / empty: scale - 110 ${isOver ? 'text-blue-400' : ''} `} />
                         {isOver ? '放在這裡' : '點擊新增第一筆記錄'}
                     </div>
                 </div>
@@ -316,10 +324,11 @@ const EditDialog: React.FC<{
 }> = ({ record, groups, onSave, onClose }) => {
     const [title, setTitle] = useState(record.title);
     const [content, setContent] = useState(record.content);
+    const [link, setLink] = useState(record.link || '');
     const [groupId, setGroupId] = useState(record.groupId || '');
 
     const handleSave = () => {
-        onSave({ ...record, title: title.trim() || '未命名', content, groupId: groupId || undefined });
+        onSave({ ...record, title: title.trim() || '未命名', content, link: link.trim() || undefined, groupId: groupId || undefined });
     };
 
     return (
@@ -381,6 +390,17 @@ const EditDialog: React.FC<{
                             placeholder="點擊此工作記錄時，會複製到剪貼板的內容..."
                         />
                     </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">
+                            <span className="flex items-center gap-1"><LinkIcon size={12} /> 連結（選填）</span>
+                        </label>
+                        <input
+                            className="w-full p-3 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm"
+                            value={link}
+                            onChange={(e) => setLink(e.target.value)}
+                            placeholder="https://example.com — 複製後可快速前往"
+                        />
+                    </div>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
@@ -413,6 +433,7 @@ const WorkRecordModal: React.FC<{
     onUpdateGroups: (groups: WorkRecordGroup[]) => void;
 }> = ({ isOpen, onClose, records, onUpdateRecords, groups, onUpdateGroups }) => {
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [linkToast, setLinkToast] = useState<{ url: string; title: string } | null>(null);
     const [editingRecord, setEditingRecord] = useState<WorkRecord | null>(null);
     const [activeRecord, setActiveRecord] = useState<WorkRecord | null>(null);
     const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
@@ -455,7 +476,7 @@ const WorkRecordModal: React.FC<{
     const allSortableIds = useMemo(() => {
         const ids: string[] = [];
         for (const g of orderedGroups) {
-            ids.push(`section_${g.id}`);
+            ids.push(`section_${g.id} `);
             const recs = recordsByGroup[g.id] || [];
             recs.forEach(r => ids.push(r.id));
         }
@@ -483,11 +504,15 @@ const WorkRecordModal: React.FC<{
             document.body.removeChild(textarea);
             setCopiedId(record.id);
         }
+        // 若有連結，顯示前往提示
+        if (record.link) {
+            setLinkToast({ url: record.link, title: record.title });
+        }
     };
 
     const handleAddRecord = (groupId?: string) => {
         const newRecord: WorkRecord = {
-            id: `wr_${Date.now()}`,
+            id: `wr_${Date.now()} `,
             title: '',
             content: '',
             groupId: groupId === '__uncategorized__' ? undefined : groupId,
@@ -511,7 +536,7 @@ const WorkRecordModal: React.FC<{
 
     const handleAddGroup = () => {
         const newGroup: WorkRecordGroup = {
-            id: `wg_${Date.now()}`,
+            id: `wg_${Date.now()} `,
             title: '未命名群組',
         };
         onUpdateGroups([...groups, newGroup]);
@@ -675,7 +700,7 @@ const WorkRecordModal: React.FC<{
                         >
                             <div className="max-w-6xl mx-auto">
                                 <SortableContext
-                                    items={orderedGroups.map(g => `section_${g.id}`)}
+                                    items={orderedGroups.map(g => `section_${g.id} `)}
                                     strategy={verticalListSortingStrategy}
                                 >
                                     {orderedGroups.map((group, idx) => {
@@ -733,7 +758,7 @@ const WorkRecordModal: React.FC<{
                                 {activeSectionId ? (
                                     <div className="bg-white rounded-xl shadow-2xl border-2 border-purple-400 px-4 py-3 opacity-90 max-w-md">
                                         <span className="font-bold text-gray-800 text-base">
-                                            {groups.find(g => `section_${g.id}` === activeSectionId)?.title || '段落'}
+                                            {groups.find(g => `section_${g.id} ` === activeSectionId)?.title || '段落'}
                                         </span>
                                     </div>
                                 ) : null}
@@ -752,6 +777,37 @@ const WorkRecordModal: React.FC<{
                     onClose={() => setEditingRecord(null)}
                 />
             )}
+            {/* Link Toast */}
+            {linkToast && (
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[300] animate-slide-up">
+                    <div className="bg-gray-900 text-white rounded-2xl shadow-2xl px-5 py-4 flex items-center gap-4 max-w-md">
+                        <div className="flex-shrink-0 w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                            <ExternalLink className="w-5 h-5 text-blue-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-100">已複製「{linkToast.title}」</p>
+                            <p className="text-xs text-gray-400 truncate">{linkToast.url}</p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                            <button
+                                onClick={() => {
+                                    window.open(linkToast.url, '_blank');
+                                    setLinkToast(null);
+                                }}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-all active:scale-95 whitespace-nowrap"
+                            >
+                                前往網站
+                            </button>
+                            <button
+                                onClick={() => setLinkToast(null)}
+                                className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <style>{`
                 @keyframes bounce-in {
@@ -761,6 +817,13 @@ const WorkRecordModal: React.FC<{
                 }
                 .animate-bounce-in {
                     animation: bounce-in 0.3s ease-out;
+                }
+                @keyframes slide-up {
+                    0% { transform: translate(-50%, 20px); opacity: 0; }
+                    100% { transform: translate(-50%, 0); opacity: 1; }
+                }
+                .animate-slide-up {
+                    animation: slide-up 0.3s ease-out;
                 }
             `}</style>
         </div>

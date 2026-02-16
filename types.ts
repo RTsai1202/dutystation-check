@@ -41,6 +41,7 @@ export interface WorkRecord {
   id: string;
   title: string;
   content: string;
+  link?: string;   // 選填連結，複製後提示前往
   groupId?: string; // 所屬群組 ID，undefined 表示「未分類」
 }
 

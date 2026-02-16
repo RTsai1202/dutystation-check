@@ -516,145 +516,147 @@ const App: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <DroppableSection
-              id="basic"
-              title="基本事項"
-              icon={<AlertCircle className="w-5 h-5 text-yellow-400" />}
-              color="bg-gray-800"
-              showAdd={true}
-              onAdd={() => handleAddTask('basic')}
-              items={visibleBasicTasks}
-            >
-              {visibleBasicTasks.map(task => (
-                <SortableTask
-                  key={task.id}
-                  task={task}
-                  sectionId="basic"
-                  isEditMode={true}
-                  isChecked={!!checkedItems[getNamespacedId(selectedShiftId, task.id)]}
-                  onToggle={() => handleToggle(getNamespacedId(selectedShiftId, task.id))}
-                  isEditing={editingTaskId === task.id}
-                  setEditing={() => setEditingTaskId(editingTaskId === task.id ? null : task.id)}
-                  onDelete={() => handleDeleteTask(task.id, 'basic')}
-                  onUpdate={(upd) => handleUpdateTask(task.id, 'basic', upd)}
-                />
-              ))}
-            </DroppableSection>
+            <div className="order-2 lg:order-none">
+              <DroppableSection
+                id="basic"
+                title="基本事項"
+                icon={<AlertCircle className="w-5 h-5 text-yellow-400" />}
+                color="bg-gray-800"
+                showAdd={true}
+                onAdd={() => handleAddTask('basic')}
+                items={visibleBasicTasks}
+              >
+                {visibleBasicTasks.map(task => (
+                  <SortableTask
+                    key={task.id}
+                    task={task}
+                    sectionId="basic"
+                    isEditMode={true}
+                    isChecked={!!checkedItems[getNamespacedId(selectedShiftId, task.id)]}
+                    onToggle={() => handleToggle(getNamespacedId(selectedShiftId, task.id))}
+                    isEditing={editingTaskId === task.id}
+                    setEditing={() => setEditingTaskId(editingTaskId === task.id ? null : task.id)}
+                    onDelete={() => handleDeleteTask(task.id, 'basic')}
+                    onUpdate={(upd) => handleUpdateTask(task.id, 'basic', upd)}
+                  />
+                ))}
+              </DroppableSection>
 
-            <DroppableSection
-              id={activeShiftData?.id || selectedShiftId}
-              title={activeShiftData?.title || '值班項目'}
-              icon={<Clock className="w-5 h-5 text-white/90" />}
-              color={activeShiftData?.colorClass || 'bg-blue-600'}
-              showAdd={true}
-              onAdd={() => activeShiftData && handleAddTask(activeShiftData.id)}
-              items={activeShiftData?.tasks || []}
-            >
-              {activeShiftData?.tasks.map(task => (
-                <SortableTask
-                  key={task.id}
-                  task={task}
-                  sectionId={activeShiftData.id}
-                  isEditMode={true}
-                  isChecked={!!checkedItems[task.id]}
-                  onToggle={() => handleToggle(task.id)}
-                  isEditing={editingTaskId === task.id}
-                  setEditing={() => setEditingTaskId(editingTaskId === task.id ? null : task.id)}
-                  onDelete={() => handleDeleteTask(task.id, activeShiftData.id)}
-                  onUpdate={(upd) => handleUpdateTask(task.id, activeShiftData.id, upd)}
-                />
-              ))}
-            </DroppableSection>
+              <DroppableSection
+                id={activeShiftData?.id || selectedShiftId}
+                title={activeShiftData?.title || '值班項目'}
+                icon={<Clock className="w-5 h-5 text-white/90" />}
+                color={activeShiftData?.colorClass || 'bg-blue-600'}
+                showAdd={true}
+                onAdd={() => activeShiftData && handleAddTask(activeShiftData.id)}
+                items={activeShiftData?.tasks || []}
+              >
+                {activeShiftData?.tasks.map(task => (
+                  <SortableTask
+                    key={task.id}
+                    task={task}
+                    sectionId={activeShiftData.id}
+                    isEditMode={true}
+                    isChecked={!!checkedItems[task.id]}
+                    onToggle={() => handleToggle(task.id)}
+                    isEditing={editingTaskId === task.id}
+                    setEditing={() => setEditingTaskId(editingTaskId === task.id ? null : task.id)}
+                    onDelete={() => handleDeleteTask(task.id, activeShiftData.id)}
+                    onUpdate={(upd) => handleUpdateTask(task.id, activeShiftData.id, upd)}
+                  />
+                ))}
+              </DroppableSection>
 
-            <DroppableSection
-              id="handover"
-              title="近期注意、交接事項"
-              icon={<FileText className="w-5 h-5 text-white/90" />}
-              color="bg-indigo-600"
-              showAdd={true}
-              onAdd={() => handleAddTask('handover')}
-              items={handoverItems}
-              headerExtra={
-                <button
-                  onClick={() => setShowTrash(!showTrash)}
-                  className={`bg-white/20 hover:bg-white/30 p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold ${showTrash ? 'bg-white/30' : ''}`}
-                  title="垃圾桶"
-                >
-                  <Trash2 size={14} />
-                </button>
-              }
-            >
-              {handoverItems.map(item => (
-                <SortableTask
-                  key={item.id}
-                  task={item}
-                  sectionId="handover"
-                  isEditMode={true}
-                  isEditing={editingTaskId === item.id}
-                  setEditing={() => setEditingTaskId(editingTaskId === item.id ? null : item.id)}
-                  onDelete={() => handleDeleteTask(item.id, 'handover')}
-                  onUpdate={(upd) => handleUpdateTask(item.id, 'handover', upd)}
-                  statusConfigs={statusConfigs}
-                  onSelectStatus={(statusId: string) => setHandoverStatus(item.id, statusId)}
-                  onUpdateStatuses={setStatusConfigs}
-                  isHandover
-                />
-              ))}
-              {handoverItems.length === 0 && (
-                <div className="text-center py-10 text-gray-400 text-sm italic">目前無待辦交接事項</div>
-              )}
+              <DroppableSection
+                id="handover"
+                title="近期注意、交接事項"
+                icon={<FileText className="w-5 h-5 text-white/90" />}
+                color="bg-indigo-600"
+                showAdd={true}
+                onAdd={() => handleAddTask('handover')}
+                items={handoverItems}
+                headerExtra={
+                  <button
+                    onClick={() => setShowTrash(!showTrash)}
+                    className={`bg-white/20 hover:bg-white/30 p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold ${showTrash ? 'bg-white/30' : ''}`}
+                    title="垃圾桶"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                }
+              >
+                {handoverItems.map(item => (
+                  <SortableTask
+                    key={item.id}
+                    task={item}
+                    sectionId="handover"
+                    isEditMode={true}
+                    isEditing={editingTaskId === item.id}
+                    setEditing={() => setEditingTaskId(editingTaskId === item.id ? null : item.id)}
+                    onDelete={() => handleDeleteTask(item.id, 'handover')}
+                    onUpdate={(upd) => handleUpdateTask(item.id, 'handover', upd)}
+                    statusConfigs={statusConfigs}
+                    onSelectStatus={(statusId: string) => setHandoverStatus(item.id, statusId)}
+                    onUpdateStatuses={setStatusConfigs}
+                    isHandover
+                  />
+                ))}
+                {handoverItems.length === 0 && (
+                  <div className="text-center py-10 text-gray-400 text-sm italic">目前無待辦交接事項</div>
+                )}
 
-              {/* Trash Panel */}
-              {showTrash && (
-                <div className="mt-4 border-t-2 border-dashed border-gray-200 pt-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2 text-gray-500">
-                      <Trash2 size={16} className="text-gray-400" />
-                      <span className="text-sm font-bold">垃圾桶</span>
-                      <span className="text-xs text-gray-400">（{trashedItems.length} 項，30 天自動清空）</span>
+                {/* Trash Panel */}
+                {showTrash && (
+                  <div className="mt-4 border-t-2 border-dashed border-gray-200 pt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <Trash2 size={16} className="text-gray-400" />
+                        <span className="text-sm font-bold">垃圾桶</span>
+                        <span className="text-xs text-gray-400">（{trashedItems.length} 項，30 天自動清空）</span>
+                      </div>
+                      {trashedItems.length > 0 && (
+                        <button
+                          onClick={clearTrash}
+                          className="text-xs text-red-400 hover:text-red-600 hover:bg-red-50 px-2.5 py-1.5 rounded-lg transition-colors font-medium flex items-center gap-1"
+                        >
+                          <Trash2 size={12} /> 清空
+                        </button>
+                      )}
                     </div>
-                    {trashedItems.length > 0 && (
-                      <button
-                        onClick={clearTrash}
-                        className="text-xs text-red-400 hover:text-red-600 hover:bg-red-50 px-2.5 py-1.5 rounded-lg transition-colors font-medium flex items-center gap-1"
-                      >
-                        <Trash2 size={12} /> 清空
-                      </button>
+                    {trashedItems.length === 0 ? (
+                      <div className="text-center py-6 text-gray-300 text-sm italic">垃圾桶是空的</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {trashedItems.map(item => {
+                          const daysLeft = Math.max(0, Math.ceil(((30 * 24 * 60 * 60 * 1000) - (Date.now() - item.trashedAt)) / (24 * 60 * 60 * 1000)));
+                          const trashedDate = new Date(item.trashedAt).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' });
+                          return (
+                            <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100 group hover:bg-gray-100 transition-colors">
+                              <div className="flex-grow min-w-0">
+                                <div className="text-sm text-gray-500 line-through truncate">{item.label}</div>
+                                {item.subtext && <div className="text-[11px] text-gray-400 truncate mt-0.5">{item.subtext}</div>}
+                                <div className="text-[10px] text-gray-400 mt-1 flex items-center gap-2">
+                                  <span>{trashedDate} 完成</span>
+                                  <span>·</span>
+                                  <span className={daysLeft <= 7 ? 'text-red-400' : ''}>{daysLeft} 天後自動清除</span>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => restoreFromTrash(item.id)}
+                                className="flex-shrink-0 text-xs text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 px-2.5 py-1.5 rounded-lg transition-colors font-medium flex items-center gap-1 opacity-0 group-hover:opacity-100"
+                                title="還原"
+                              >
+                                <RotateCcw size={12} /> 還原
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
-                  {trashedItems.length === 0 ? (
-                    <div className="text-center py-6 text-gray-300 text-sm italic">垃圾桶是空的</div>
-                  ) : (
-                    <div className="space-y-2">
-                      {trashedItems.map(item => {
-                        const daysLeft = Math.max(0, Math.ceil(((30 * 24 * 60 * 60 * 1000) - (Date.now() - item.trashedAt)) / (24 * 60 * 60 * 1000)));
-                        const trashedDate = new Date(item.trashedAt).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' });
-                        return (
-                          <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100 group hover:bg-gray-100 transition-colors">
-                            <div className="flex-grow min-w-0">
-                              <div className="text-sm text-gray-500 line-through truncate">{item.label}</div>
-                              {item.subtext && <div className="text-[11px] text-gray-400 truncate mt-0.5">{item.subtext}</div>}
-                              <div className="text-[10px] text-gray-400 mt-1 flex items-center gap-2">
-                                <span>{trashedDate} 完成</span>
-                                <span>·</span>
-                                <span className={daysLeft <= 7 ? 'text-red-400' : ''}>{daysLeft} 天後自動清除</span>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => restoreFromTrash(item.id)}
-                              className="flex-shrink-0 text-xs text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 px-2.5 py-1.5 rounded-lg transition-colors font-medium flex items-center gap-1 opacity-0 group-hover:opacity-100"
-                              title="還原"
-                            >
-                              <RotateCcw size={12} /> 還原
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-            </DroppableSection>
+                )}
+              </DroppableSection>
+            </div>
           </div>
 
           <DragOverlay>
