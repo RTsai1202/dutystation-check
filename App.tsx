@@ -6,6 +6,28 @@ import { StatusDropdown } from './components/StatusDropdown';
 import ScheduleEditor from './components/ScheduleEditor';
 import { TaskItem, ShiftSection, HandoverItem, StatusConfig } from './types';
 import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  pointerWithin,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+  type DragOverEvent,
+  useDroppable,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
   Calendar,
   ClipboardCheck,
   FileText,
@@ -21,7 +43,8 @@ import {
   ChevronRight,
   Palette,
   X,
-  RotateCcw
+  RotateCcw,
+  GripVertical,
 } from 'lucide-react';
 
 const STORAGE_STATE_KEY = 'duty_station_state_v2';
@@ -186,6 +209,104 @@ const App: React.FC = () => {
     ));
   };
 
+  // --- DnD Setup ---
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+  const [activeTask, setActiveTask] = useState<TaskItem | null>(null);
+
+  // Helper: find which container a task belongs to
+  const findContainer = (taskId: string): string | null => {
+    if (basicTasks.find(t => t.id === taskId)) return 'basic';
+    if (handoverItems.find(t => t.id === taskId)) return 'handover';
+    for (const s of shiftSections) {
+      if (s.tasks.find(t => t.id === taskId)) return s.id;
+    }
+    return null;
+  };
+
+  // Helper: get tasks from a container
+  const getContainerTasks = (containerId: string): TaskItem[] => {
+    if (containerId === 'basic') return basicTasks;
+    if (containerId === 'handover') return handoverItems;
+    return shiftSections.find(s => s.id === containerId)?.tasks || [];
+  };
+
+  // Helper: set tasks for a container
+  const setContainerTasks = (containerId: string, tasks: TaskItem[]) => {
+    if (containerId === 'basic') setBasicTasks(tasks);
+    else if (containerId === 'handover') setHandoverItems(tasks as HandoverItem[]);
+    else setShiftSections(prev => prev.map(s => s.id === containerId ? { ...s, tasks } : s));
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const container = findContainer(active.id as string);
+    if (!container) return;
+    const tasks = getContainerTasks(container);
+    setActiveTask(tasks.find(t => t.id === active.id) || null);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveTask(null);
+    if (!over || active.id === over.id) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+    const sourceContainer = findContainer(activeId);
+    if (!sourceContainer) return;
+
+    // Check if dropped on a shift tab
+    const shiftTabTarget = shiftSections.find(s => overId === `tab_${s.id}`);
+    if (shiftTabTarget) {
+      // Don't allow handover items to move to shift tabs
+      if (sourceContainer === 'handover') return;
+      const sourceTasks = getContainerTasks(sourceContainer);
+      const task = sourceTasks.find(t => t.id === activeId);
+      if (!task) return;
+      // Remove from source
+      setContainerTasks(sourceContainer, sourceTasks.filter(t => t.id !== activeId));
+      // Add to target shift
+      setShiftSections(prev => prev.map(s =>
+        s.id === shiftTabTarget.id ? { ...s, tasks: [...s.tasks, task] } : s
+      ));
+      return;
+    }
+
+    // Check if dropped on a container header
+    const targetContainer = findContainer(overId) || (['basic', 'handover'].includes(overId) ? overId : shiftSections.find(s => s.id === overId)?.id || null);
+
+    if (!targetContainer) return;
+
+    // Don't allow cross moves involving handover
+    if (sourceContainer === 'handover' && targetContainer !== 'handover') return;
+    if (sourceContainer !== 'handover' && targetContainer === 'handover') return;
+
+    if (sourceContainer === targetContainer) {
+      // Same container: reorder
+      const tasks = getContainerTasks(sourceContainer);
+      const oldIdx = tasks.findIndex(t => t.id === activeId);
+      const newIdx = tasks.findIndex(t => t.id === overId);
+      if (oldIdx !== -1 && newIdx !== -1) {
+        setContainerTasks(sourceContainer, arrayMove(tasks, oldIdx, newIdx));
+      }
+    } else {
+      // Cross container: move
+      const sourceTasks = getContainerTasks(sourceContainer);
+      const targetTasks = getContainerTasks(targetContainer);
+      const task = sourceTasks.find(t => t.id === activeId);
+      if (!task) return;
+      const overIdx = targetTasks.findIndex(t => t.id === overId);
+      const insertIdx = overIdx !== -1 ? overIdx : targetTasks.length;
+      setContainerTasks(sourceContainer, sourceTasks.filter(t => t.id !== activeId));
+      const newTargetTasks = [...targetTasks];
+      newTargetTasks.splice(insertIdx, 0, task);
+      setContainerTasks(targetContainer, newTargetTasks);
+    }
+  };
+
 
 
   return (
@@ -276,15 +397,13 @@ const App: React.FC = () => {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {shiftSections.map((section) => (
-            <button
+            <ShiftTabDroppable
               key={section.id}
+              section={section}
+              isActive={selectedShiftId === section.id}
               onClick={() => setSelectedShiftId(section.id)}
-              className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${selectedShiftId === section.id ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white border-gray-200 text-gray-600 hover:bg-blue-50'
-                }`}
-            >
-              <span className="text-base font-bold">{section.title}</span>
-              <span className={`text-xs font-mono mt-1 ${selectedShiftId === section.id ? 'text-blue-100' : 'text-gray-500'}`}>{section.timeRange}</span>
-            </button>
+              isEditMode={isEditMode}
+            />
           ))}
         </div>
 
@@ -299,114 +418,197 @@ const App: React.FC = () => {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <SectionContainer
-            title="基本事項"
-            icon={<AlertCircle className="w-5 h-5 text-yellow-400" />}
-            color="bg-gray-800"
-            showAdd={isEditMode}
-            onAdd={() => handleAddTask('basic')}
-          >
-            {visibleBasicTasks.map(task => (
-              <EditableTask
-                key={task.id}
-                task={task}
-                sectionId="basic"
-                isEditMode={isEditMode}
-                isChecked={!!checkedItems[getNamespacedId(selectedShiftId, task.id)]}
-                onToggle={() => handleToggle(getNamespacedId(selectedShiftId, task.id))}
-                isEditing={editingTaskId === task.id}
-                setEditing={() => setEditingTaskId(editingTaskId === task.id ? null : task.id)}
-                onDelete={() => handleDeleteTask(task.id, 'basic')}
-                onUpdate={(upd) => handleUpdateTask(task.id, 'basic', upd)}
-              />
-            ))}
-          </SectionContainer>
-
-          <SectionContainer
-            title={activeShiftData?.title || '值班項目'}
-            icon={<Clock className="w-5 h-5 text-white/90" />}
-            color={activeShiftData?.colorClass || 'bg-blue-600'}
-            showAdd={isEditMode}
-            onAdd={() => activeShiftData && handleAddTask(activeShiftData.id)}
-          >
-            {activeShiftData?.tasks.map(task => (
-              <EditableTask
-                key={task.id}
-                task={task}
-                sectionId={activeShiftData.id}
-                isEditMode={isEditMode}
-                isChecked={!!checkedItems[task.id]}
-                onToggle={() => handleToggle(task.id)}
-                isEditing={editingTaskId === task.id}
-                setEditing={() => setEditingTaskId(editingTaskId === task.id ? null : task.id)}
-                onDelete={() => handleDeleteTask(task.id, activeShiftData.id)}
-                onUpdate={(upd) => handleUpdateTask(task.id, activeShiftData.id, upd)}
-              />
-            ))}
-          </SectionContainer>
-
-          <SectionContainer
-            title="近期注意、交接事項"
-            icon={<FileText className="w-5 h-5 text-white/90" />}
-            color="bg-indigo-600"
-            showAdd={true} // Always allow adding handovers
-            onAdd={() => handleAddTask('handover')}
-          >
-            {handoverItems
-              .filter(item => {
-                const status = statusConfigs.find(s => s.id === item.statusId);
-                return !status?.isDone;
-              })
-              .map(item => (
-                <EditableTask
-                  key={item.id}
-                  task={item}
-                  sectionId="handover"
+        <DndContext
+          sensors={isEditMode ? sensors : []}
+          collisionDetection={pointerWithin}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <DroppableSection
+              id="basic"
+              title="基本事項"
+              icon={<AlertCircle className="w-5 h-5 text-yellow-400" />}
+              color="bg-gray-800"
+              showAdd={isEditMode}
+              onAdd={() => handleAddTask('basic')}
+              items={visibleBasicTasks}
+            >
+              {visibleBasicTasks.map(task => (
+                <SortableTask
+                  key={task.id}
+                  task={task}
+                  sectionId="basic"
                   isEditMode={isEditMode}
-                  isEditing={editingTaskId === item.id}
-                  setEditing={() => setEditingTaskId(editingTaskId === item.id ? null : item.id)}
-                  onDelete={() => handleDeleteTask(item.id, 'handover')}
-                  onUpdate={(upd) => handleUpdateTask(item.id, 'handover', upd)}
-                  statusConfigs={statusConfigs}
-                  onSelectStatus={(statusId: string) => setHandoverStatus(item.id, statusId)}
-                  onUpdateStatuses={setStatusConfigs}
-                  isHandover
+                  isChecked={!!checkedItems[getNamespacedId(selectedShiftId, task.id)]}
+                  onToggle={() => handleToggle(getNamespacedId(selectedShiftId, task.id))}
+                  isEditing={editingTaskId === task.id}
+                  setEditing={() => setEditingTaskId(editingTaskId === task.id ? null : task.id)}
+                  onDelete={() => handleDeleteTask(task.id, 'basic')}
+                  onUpdate={(upd) => handleUpdateTask(task.id, 'basic', upd)}
                 />
               ))}
-            {handoverItems.filter(item => {
-              const status = statusConfigs.find(s => s.id === item.statusId);
-              return !status?.isDone;
-            }).length === 0 && (
-                <div className="text-center py-10 text-gray-400 text-sm italic">目前無待辦交接事項</div>
-              )}
-          </SectionContainer>
-        </div>
+            </DroppableSection>
+
+            <DroppableSection
+              id={activeShiftData?.id || selectedShiftId}
+              title={activeShiftData?.title || '值班項目'}
+              icon={<Clock className="w-5 h-5 text-white/90" />}
+              color={activeShiftData?.colorClass || 'bg-blue-600'}
+              showAdd={isEditMode}
+              onAdd={() => activeShiftData && handleAddTask(activeShiftData.id)}
+              items={activeShiftData?.tasks || []}
+            >
+              {activeShiftData?.tasks.map(task => (
+                <SortableTask
+                  key={task.id}
+                  task={task}
+                  sectionId={activeShiftData.id}
+                  isEditMode={isEditMode}
+                  isChecked={!!checkedItems[task.id]}
+                  onToggle={() => handleToggle(task.id)}
+                  isEditing={editingTaskId === task.id}
+                  setEditing={() => setEditingTaskId(editingTaskId === task.id ? null : task.id)}
+                  onDelete={() => handleDeleteTask(task.id, activeShiftData.id)}
+                  onUpdate={(upd) => handleUpdateTask(task.id, activeShiftData.id, upd)}
+                />
+              ))}
+            </DroppableSection>
+
+            <DroppableSection
+              id="handover"
+              title="近期注意、交接事項"
+              icon={<FileText className="w-5 h-5 text-white/90" />}
+              color="bg-indigo-600"
+              showAdd={true}
+              onAdd={() => handleAddTask('handover')}
+              items={handoverItems.filter(item => { const status = statusConfigs.find(s => s.id === item.statusId); return !status?.isDone; })}
+            >
+              {handoverItems
+                .filter(item => {
+                  const status = statusConfigs.find(s => s.id === item.statusId);
+                  return !status?.isDone;
+                })
+                .map(item => (
+                  <SortableTask
+                    key={item.id}
+                    task={item}
+                    sectionId="handover"
+                    isEditMode={isEditMode}
+                    isEditing={editingTaskId === item.id}
+                    setEditing={() => setEditingTaskId(editingTaskId === item.id ? null : item.id)}
+                    onDelete={() => handleDeleteTask(item.id, 'handover')}
+                    onUpdate={(upd) => handleUpdateTask(item.id, 'handover', upd)}
+                    statusConfigs={statusConfigs}
+                    onSelectStatus={(statusId: string) => setHandoverStatus(item.id, statusId)}
+                    onUpdateStatuses={setStatusConfigs}
+                    isHandover
+                  />
+                ))}
+              {handoverItems.filter(item => {
+                const status = statusConfigs.find(s => s.id === item.statusId);
+                return !status?.isDone;
+              }).length === 0 && (
+                  <div className="text-center py-10 text-gray-400 text-sm italic">目前無待辦交接事項</div>
+                )}
+            </DroppableSection>
+          </div>
+
+          <DragOverlay>
+            {activeTask ? (
+              <div className="bg-white rounded-lg shadow-2xl border-2 border-blue-400 p-3 opacity-90 max-w-xs">
+                <div className="font-medium text-gray-800 text-sm">{activeTask.label}</div>
+                {activeTask.subtext && <div className="text-xs text-gray-500 mt-1">{activeTask.subtext}</div>}
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       </main>
     </div>
   );
 };
 
-const SectionContainer: React.FC<{
-  title: string, icon: React.ReactNode, color: string, children: React.ReactNode, showAdd: boolean, onAdd: () => void
-}> = ({ title, icon, color, children, showAdd, onAdd }) => (
-  <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden min-h-[400px]">
-    <div className={`${color} px-5 py-4 text-white flex justify-between items-center sticky top-0 z-10`}>
-      <div className="flex items-center gap-2">
-        {icon}
-        <h2 className="text-lg font-bold">{title}</h2>
+// --- Droppable Section Container ---
+const DroppableSection: React.FC<{
+  id: string;
+  title: string;
+  icon: React.ReactNode;
+  color: string;
+  children: React.ReactNode;
+  showAdd: boolean;
+  onAdd: () => void;
+  items: TaskItem[];
+}> = ({ id, title, icon, color, children, showAdd, onAdd, items }) => {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <SortableContext items={items.map(t => t.id)} strategy={verticalListSortingStrategy}>
+      <div
+        ref={setNodeRef}
+        className={`bg-white rounded-xl shadow-sm border-2 flex flex-col overflow-hidden min-h-[400px] transition-all duration-200 ${isOver ? 'border-blue-400 ring-2 ring-blue-200 bg-blue-50/30' : 'border-gray-200'
+          }`}
+      >
+        <div className={`${color} px-5 py-4 text-white flex justify-between items-center sticky top-0 z-10`}>
+          <div className="flex items-center gap-2">
+            {icon}
+            <h2 className="text-lg font-bold">{title}</h2>
+          </div>
+          {showAdd && (
+            <button onClick={onAdd} className="bg-white/20 hover:bg-white/30 p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold">
+              <Plus size={14} /> 新增
+            </button>
+          )}
+        </div>
+        <div className="p-4 space-y-3 flex-grow overflow-y-auto">
+          {children}
+        </div>
       </div>
-      {showAdd && (
-        <button onClick={onAdd} className="bg-white/20 hover:bg-white/30 p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold">
-          <Plus size={14} /> 新增
-        </button>
-      )}
+    </SortableContext>
+  );
+};
+
+// --- Shift Tab Droppable ---
+const ShiftTabDroppable: React.FC<{
+  section: ShiftSection;
+  isActive: boolean;
+  onClick: () => void;
+  isEditMode: boolean;
+}> = ({ section, isActive, onClick, isEditMode }) => {
+  const { setNodeRef, isOver } = useDroppable({ id: `tab_${section.id}`, disabled: !isEditMode || isActive });
+  return (
+    <button
+      ref={setNodeRef}
+      onClick={onClick}
+      className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${isOver
+          ? 'bg-blue-100 border-blue-500 text-blue-700 ring-2 ring-blue-300 scale-105'
+          : isActive
+            ? 'bg-blue-600 border-blue-600 text-white shadow-md'
+            : 'bg-white border-gray-200 text-gray-600 hover:bg-blue-50'
+        }`}
+    >
+      <span className="text-base font-bold">{section.title}</span>
+      <span className={`text-xs font-mono mt-1 ${isOver ? 'text-blue-500' : isActive ? 'text-blue-100' : 'text-gray-500'
+        }`}>{section.timeRange}</span>
+      {isOver && <span className="text-[10px] text-blue-500 font-bold mt-1">放這裡</span>}
+    </button>
+  );
+};
+
+// --- Sortable Task Wrapper ---
+const SortableTask: React.FC<any> = (props) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.task.id, disabled: !props.isEditMode });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.3 : 1,
+    position: 'relative' as const,
+    zIndex: isDragging ? 50 : 'auto' as any,
+  };
+  return (
+    <div ref={setNodeRef} style={style}>
+      <EditableTask {...props} dragHandleProps={{ ...attributes, ...listeners }} isDragging={isDragging} />
     </div>
-    <div className="p-4 space-y-3 flex-grow overflow-y-auto">
-      {children}
-    </div>
-  </div>
-);
+  );
+};
 
 const EditableTask: React.FC<{
   task: any;
@@ -422,7 +624,9 @@ const EditableTask: React.FC<{
   onSelectStatus?: (statusId: string) => void;
   onUpdateStatuses?: (statuses: StatusConfig[]) => void;
   isHandover?: boolean;
-}> = ({ task, isEditMode, isChecked, onToggle, isEditing, setEditing, onDelete, onUpdate, statusConfigs, onSelectStatus, onUpdateStatuses, isHandover }) => {
+  dragHandleProps?: any;
+  isDragging?: boolean;
+}> = ({ task, isEditMode, isChecked, onToggle, isEditing, setEditing, onDelete, onUpdate, statusConfigs, onSelectStatus, onUpdateStatuses, isHandover, dragHandleProps }) => {
   const currentStatus = statusConfigs?.find(s => s.id === task.statusId);
 
   // If we are actively editing this specific task, show the form
@@ -492,10 +696,15 @@ const EditableTask: React.FC<{
     if (task.isHeader) {
       return (
         <div className="mt-4 mb-2 group flex items-center justify-between">
-          <h4 className="font-bold text-gray-800 flex items-center gap-2">
-            <span className="w-1 h-4 bg-gray-500 rounded-full"></span>
-            {task.label}
-          </h4>
+          <div className="flex items-center gap-2">
+            <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none">
+              <GripVertical size={16} />
+            </div>
+            <h4 className="font-bold text-gray-800 flex items-center gap-2">
+              <span className="w-1 h-4 bg-gray-500 rounded-full"></span>
+              {task.label}
+            </h4>
+          </div>
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button onClick={setEditing} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-md" title="編輯內容"><Edit2 size={14} /></button>
             <button onClick={onDelete} className="p-1.5 text-red-500 hover:bg-red-50 rounded-md" title="刪除"><Trash2 size={14} /></button>
@@ -511,6 +720,9 @@ const EditableTask: React.FC<{
           }`}
         onClick={onToggle}
       >
+        <div {...dragHandleProps} className="flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none" onClick={e => e.stopPropagation()}>
+          <GripVertical size={16} />
+        </div>
         <div className={`flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center transition-colors duration-200 ${isChecked ? 'bg-blue-600 border-blue-600' : 'border-gray-300 group-hover:border-blue-400'
           }`}>
           {isChecked && <Check size={16} className="text-white" strokeWidth={3} />}
