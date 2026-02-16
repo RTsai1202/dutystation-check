@@ -123,13 +123,13 @@ const SortableRecordItem: React.FC<{
             {/* Main clickable area */}
             <button
                 onClick={() => onCopy(record)}
-                className={`flex - grow text - left px - 3 py - 2.5 rounded - xl border - 2 transition - all duration - 300 min - w - 0 ${isCopied
+                className={`flex-grow text-left px-3 py-2.5 rounded-xl border-2 transition-all duration-300 min-w-0 ${isCopied
                     ? 'bg-green-50 border-green-400 shadow-lg shadow-green-100 scale-[1.02]'
                     : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-md active:scale-[0.98]'
-                    } `}
+                    }`}
             >
                 <div className="flex items-center justify-between gap-2">
-                    <span className={`font - medium text - sm truncate transition - colors ${isCopied ? 'text-green-700' : 'text-gray-800'} `}>
+                    <span className={`font-medium text-sm truncate transition-colors ${isCopied ? 'text-green-700' : 'text-gray-800'}`}>
                         {record.title || '未命名'}
                     </span>
                     <div className="flex items-center gap-1 flex-shrink-0">
@@ -239,7 +239,7 @@ const SortableSectionHeader: React.FC<{
                     />
                 ) : (
                     <span
-                        className={`flex - grow text - base font - bold ${isUncategorized ? 'text-gray-500' : 'text-gray-800 cursor-pointer hover:text-blue-600'} transition - colors`}
+                        className={`flex-grow text-base font-bold ${isUncategorized ? 'text-gray-500' : 'text-gray-800 cursor-pointer hover:text-blue-600'} transition-colors`}
                         onDoubleClick={() => { if (!isUncategorized) { setRenameValue(group.title); setIsRenaming(true); } }}
                     >
                         {group.title}
@@ -283,15 +283,15 @@ const SectionContent: React.FC<{
     return (
         <div
             ref={setNodeRef}
-            className={`pl - 6 pb - 4 transition - all duration - 200 ${isOver ? 'bg-blue-50/40 rounded-xl' : ''} `}
+            className={`pl-6 pb-4 transition-all duration-200 ${isOver ? 'bg-blue-50/40 rounded-xl' : ''}`}
         >
             {records.length === 0 ? (
                 <div
                     onClick={() => onAddRecord(groupId)}
-                    className={`text - center py - 4 text - sm italic rounded - xl border - 2 border - dashed transition - colors cursor - pointer group / empty ${isOver ? 'text-blue-400 border-blue-300 bg-blue-50' : 'text-gray-300 border-gray-200 hover:text-blue-400 hover:border-blue-300 hover:bg-blue-50/50'} `}
+                    className={`text-center py-4 text-sm italic rounded-xl border-2 border-dashed transition-colors cursor-pointer group/empty ${isOver ? 'text-blue-400 border-blue-300 bg-blue-50' : 'text-gray-300 border-gray-200 hover:text-blue-400 hover:border-blue-300 hover:bg-blue-50/50'}`}
                 >
                     <div className="flex items-center justify-center gap-1.5">
-                        <Plus size={16} className={`transition - transform group - hover / empty: scale - 110 ${isOver ? 'text-blue-400' : ''} `} />
+                        <Plus size={16} className={`transition-transform group-hover/empty:scale-110 ${isOver ? 'text-blue-400' : ''}`} />
                         {isOver ? '放在這裡' : '點擊新增第一筆記錄'}
                     </div>
                 </div>
