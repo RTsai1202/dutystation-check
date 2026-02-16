@@ -995,8 +995,8 @@ const SortableTask: React.FC<any> = (props) => {
     zIndex: isDragging ? 50 : 'auto' as any,
   };
   return (
-    <div ref={setNodeRef} style={style}>
-      <EditableTask {...props} dragHandleProps={{ ...attributes, ...listeners }} isDragging={isDragging} />
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <EditableTask {...props} isDragging={isDragging} />
     </div>
   );
 };
