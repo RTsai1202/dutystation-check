@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { TaskItem } from '../types';
-import { Check, ExternalLink } from 'lucide-react';
+import { Check, ExternalLink, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import Markdown from 'react-markdown';
 
 interface Props {
   task: TaskItem;
@@ -10,6 +11,7 @@ interface Props {
 
 export const CheckboxItem: React.FC<Props> = ({ task, isChecked, onToggle }) => {
   const [justChecked, setJustChecked] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
 
   const handleCheckboxClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -35,7 +37,7 @@ export const CheckboxItem: React.FC<Props> = ({ task, isChecked, onToggle }) => 
   return (
     <div
       className={`
-        group flex items-start gap-3 p-3 rounded-lg border transition-all duration-200 relative overflow-hidden
+        group flex items-start gap-3 p-3 rounded-lg border transition-all duration-200 relative overflow-hidden flex-wrap
         ${isChecked
           ? 'bg-blue-50 border-blue-200 shadow-sm'
           : 'bg-white border-gray-100 hover:border-gray-300 hover:bg-gray-50'}
@@ -78,6 +80,20 @@ export const CheckboxItem: React.FC<Props> = ({ task, isChecked, onToggle }) => 
         )}
       </div>
 
+      {/* Notes info icon - only show when notes exist */}
+      {task.notes && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setShowNotes(!showNotes); }}
+          className={`flex-shrink-0 p-1.5 ml-1 rounded-md transition-colors ${showNotes
+              ? 'text-amber-600 bg-amber-50'
+              : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'
+            }`}
+          title="查看筆記"
+        >
+          <Info size={16} />
+        </button>
+      )}
+
       {/* External link icon - pushed right with margin */}
       {task.link && (
         <a
@@ -93,11 +109,20 @@ export const CheckboxItem: React.FC<Props> = ({ task, isChecked, onToggle }) => 
               onToggle();
             }
           }}
-          className="flex-shrink-0 text-gray-400 hover:text-blue-600 p-1.5 ml-2 rounded-md hover:bg-blue-50 transition-colors"
+          className="flex-shrink-0 text-gray-400 hover:text-blue-600 p-1.5 ml-1 rounded-md hover:bg-blue-50 transition-colors"
           title="開啟連結"
         >
           <ExternalLink size={16} />
         </a>
+      )}
+
+      {/* Notes panel */}
+      {showNotes && task.notes && (
+        <div className="w-full mt-2 -mb-1 col-span-full" style={{ gridColumn: '1 / -1' }}>
+          <div className="ml-9 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-gray-700 prose prose-sm max-w-none prose-headings:text-gray-800 prose-a:text-blue-600 prose-code:bg-gray-100 prose-code:px-1 prose-code:rounded">
+            <Markdown>{task.notes}</Markdown>
+          </div>
+        </div>
       )}
 
       {/* CSS animations */}

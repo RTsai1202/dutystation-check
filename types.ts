@@ -4,6 +4,7 @@ export interface TaskItem {
   label: string;
   link?: string;
   subtext?: string;
+  notes?: string;        // Markdown 筆記內容
   isHeader?: boolean;
   showOnDays?: number[];    // 0-6 (Sunday-Saturday)
   showInMonths?: number[];  // 1-12 (January-December)

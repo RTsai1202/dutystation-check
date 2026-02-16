@@ -48,8 +48,9 @@ import {
   ChevronUp,
   GripVertical,
   Lock,
+  Info,
 } from 'lucide-react';
-
+import Markdown from 'react-markdown';
 
 import { useFirebaseSync } from './useFirebaseSync';
 
@@ -848,6 +849,7 @@ const EditModeTask: React.FC<{
 }> = ({ task, isChecked, onToggle, dragHandleProps, onEdit, onDelete }) => {
   const [justChecked, setJustChecked] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+  const [showNotes, setShowNotes] = useState(false);
 
   const handleCheckboxClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -861,7 +863,7 @@ const EditModeTask: React.FC<{
   return (
     <>
       <div
-        className={`group flex items-start gap-3 p-3 rounded-lg border transition-all duration-200 relative overflow-hidden ${isChecked
+        className={`group flex items-start gap-3 p-3 rounded-lg border transition-all duration-200 relative overflow-hidden flex-wrap ${isChecked
           ? 'bg-blue-50 border-blue-200 shadow-sm'
           : 'bg-white border-gray-100 hover:border-gray-300 hover:bg-gray-50'
           }`}
@@ -909,6 +911,20 @@ const EditModeTask: React.FC<{
           )}
         </div>
 
+        {/* Notes info icon */}
+        {task.notes && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowNotes(!showNotes); }}
+            className={`flex-shrink-0 p-1.5 ml-1 rounded-md transition-colors ${showNotes
+              ? 'text-amber-600 bg-amber-50'
+              : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'
+              }`}
+            title="查看筆記"
+          >
+            <Info size={16} />
+          </button>
+        )}
+
         {/* External link icon - pushed to the right */}
         {task.link && (
           <a
@@ -924,11 +940,20 @@ const EditModeTask: React.FC<{
                 onToggle();
               }
             }}
-            className="flex-shrink-0 text-gray-400 hover:text-blue-600 p-1.5 ml-2 rounded-md hover:bg-blue-50 transition-colors"
+            className="flex-shrink-0 text-gray-400 hover:text-blue-600 p-1.5 ml-1 rounded-md hover:bg-blue-50 transition-colors"
             title="開啟連結"
           >
             <ExternalLink size={16} />
           </a>
+        )}
+
+        {/* Notes panel */}
+        {showNotes && task.notes && (
+          <div className="w-full mt-2 -mb-1">
+            <div className="ml-9 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-gray-700 prose prose-sm max-w-none">
+              <Markdown>{task.notes}</Markdown>
+            </div>
+          </div>
         )}
       </div>
       {ctxMenu && <ContextMenu x={ctxMenu.x} y={ctxMenu.y} onEdit={onEdit} onDelete={onDelete} onClose={() => setCtxMenu(null)} />}
@@ -1022,7 +1047,7 @@ const EditableTask: React.FC<{
             className="w-full p-2.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm min-h-[60px]"
             value={task.subtext || ''}
             onChange={(e) => onUpdate({ subtext: e.target.value })}
-            placeholder="補充說明..."
+            placeholder="摘要內容..."
           />
           <div className="flex items-center gap-2">
             <div className="relative flex-grow">
@@ -1051,6 +1076,25 @@ const EditableTask: React.FC<{
               onUpdateMonths={(months) => onUpdate({ showInMonths: months })}
             />
           )}
+          {/* 筆記內容編輯器 */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Info size={14} className="text-amber-500" />
+              <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">筆記內容 (Markdown)</span>
+            </div>
+            <textarea
+              className="w-full p-2.5 text-xs border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none shadow-sm min-h-[100px] font-mono bg-amber-50/50"
+              value={task.notes || ''}
+              onChange={(e) => onUpdate({ notes: e.target.value })}
+              placeholder={"支援 Markdown 格式，例如：\n# 標題\n- 清單項目\n**粗體** *斜體*"}
+            />
+            {task.notes && (
+              <div className="p-3 bg-white border border-amber-200 rounded-lg text-sm text-gray-700 prose prose-sm max-w-none">
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">預覽</div>
+                <Markdown>{task.notes}</Markdown>
+              </div>
+            )}
+          </div>
           <div className="flex justify-between items-center pt-2">
             <button onClick={onDelete} className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1 text-xs">
               <Trash2 size={16} /> 刪除
