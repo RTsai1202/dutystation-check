@@ -1128,7 +1128,7 @@ const EditableTask: React.FC<{
   // Normal view for handover items
   if (isHandover) {
     return (
-      <div className="flex flex-col p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all group relative">
+      <div {...dragHandleProps} className="flex flex-col p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all group relative cursor-grab active:cursor-grabbing touch-none">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-grow space-y-1">
             <div className="text-base font-bold text-gray-800 leading-tight whitespace-pre-wrap">{task.label}</div>
