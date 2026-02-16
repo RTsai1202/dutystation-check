@@ -1,32 +1,34 @@
 <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-  <!-- Head -->
-  <circle cx="100" cy="100" r="80" fill="#8B4513" stroke="#5D4037" stroke-width="4"/>
-  
-  <!-- Ears -->
-  <circle cx="30" cy="100" r="25" fill="#8B4513" stroke="#5D4037" stroke-width="4"/>
-  <circle cx="30" cy="100" r="15" fill="#D7CCC8"/>
-  <circle cx="170" cy="100" r="25" fill="#8B4513" stroke="#5D4037" stroke-width="4"/>
-  <circle cx="170" cy="100" r="15" fill="#D7CCC8"/>
-  
-  <!-- Face -->
-  <path d="M 50 80 Q 100 60 150 80 Q 150 160 100 170 Q 50 160 50 80 Z" fill="#D7CCC8"/>
-  
-  <!-- Eyes -->
-  <ellipse cx="75" cy="95" rx="15" ry="20" fill="white" stroke="black" stroke-width="2"/>
-  <circle cx="75" cy="95" r="5" fill="black"/>
-  
-  <ellipse cx="125" cy="95" rx="15" ry="20" fill="white" stroke="black" stroke-width="2"/>
-  <circle cx="125" cy="95" r="5" fill="black"/>
-  
-  <!-- Eyebrows (Mocking) -->
-  <path d="M 60 70 Q 75 60 90 70" stroke="black" stroke-width="3" fill="none"/>
-  <path d="M 110 70 Q 125 60 140 65" stroke="black" stroke-width="3" fill="none" transform="rotate(-15, 125, 65)"/>
+  <!-- Ears (moved outward slightly and lowered) -->
+  <circle cx="25" cy="110" r="25" fill="#8B4513" stroke="#5D4037" stroke-width="4"/>
+  <circle cx="25" cy="110" r="15" fill="#D7CCC8"/>
+  <circle cx="175" cy="110" r="25" fill="#8B4513" stroke="#5D4037" stroke-width="4"/>
+  <circle cx="175" cy="110" r="15" fill="#D7CCC8"/>
 
-  <!-- Mouth (Smirk) -->
-  <path d="M 70 140 Q 100 155 130 135" stroke="black" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <!-- Head (enlarged r=80 -> r=90, moved down cy=100 -> cy=110 to center better visually) -->
+  <circle cx="100" cy="110" r="90" fill="#8B4513" stroke="#5D4037" stroke-width="4"/>
   
-  <!-- Nose -->
-  <circle cx="100" cy="115" r="5" fill="black"/>
-  <circle cx="95" cy="118" r="2" fill="#555"/>
-  <circle cx="105" cy="118" r="2" fill="#555"/>
+  <!-- Face (scaled up and adjusted) -->
+  <path d="M 45 90 Q 100 65 155 90 Q 155 180 100 190 Q 45 180 45 90 Z" fill="#D7CCC8"/>
+  
+  <!-- Eyes (larger) -->
+  <g transform="translate(0, 10)">
+    <ellipse cx="70" cy="95" rx="18" ry="24" fill="white" stroke="black" stroke-width="2"/>
+    <circle cx="70" cy="95" r="6" fill="black"/>
+    
+    <ellipse cx="130" cy="95" rx="18" ry="24" fill="white" stroke="black" stroke-width="2"/>
+    <circle cx="130" cy="95" r="6" fill="black"/>
+    
+    <!-- Eyebrows (More aggressive arch) -->
+    <path d="M 50 65 Q 70 50 90 65" stroke="black" stroke-width="4" fill="none"/>
+    <path d="M 110 65 Q 130 50 150 60" stroke="black" stroke-width="4" fill="none" transform="rotate(-15, 130, 60)"/>
+
+    <!-- Nose -->
+    <circle cx="100" cy="125" r="6" fill="black"/>
+    <circle cx="94" cy="128" r="2.5" fill="#555"/>
+    <circle cx="106" cy="128" r="2.5" fill="#555"/>
+
+    <!-- Mouth (Big Smirk) -->
+    <path d="M 60 155 Q 100 175 140 145" stroke="black" stroke-width="5" fill="none" stroke-linecap="round"/>
+  </g>
 </svg>
