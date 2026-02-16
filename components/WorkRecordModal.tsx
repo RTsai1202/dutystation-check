@@ -29,7 +29,6 @@ import {
     Check,
     X,
     FolderPlus,
-    GripVertical,
     GripHorizontal,
     ChevronDown,
     ChevronRight,
@@ -110,22 +109,19 @@ const SortableRecordItem: React.FC<{
     const isCopied = copiedId === record.id;
 
     return (
-        <div ref={setNodeRef} style={style} className="flex items-center gap-1.5 group">
-            {/* Drag handle */}
-            <div
-                {...attributes}
-                {...listeners}
-                className="flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none p-0.5"
-            >
-                <GripVertical size={14} />
-            </div>
-
+        <div
+            ref={setNodeRef}
+            style={style}
+            className="flex items-center gap-1.5 group"
+            {...attributes}
+            {...listeners}
+        >
             {/* Main clickable area */}
             <button
                 onClick={() => onCopy(record)}
-                className={`flex-grow text-left px-3 py-2.5 rounded-xl border-2 transition-all duration-300 min-w-0 ${isCopied
+                className={`flex-grow text-left px-3 py-2.5 rounded-xl border-2 transition-all duration-300 min-w-0 cursor-grab active:cursor-grabbing ${isCopied
                     ? 'bg-green-50 border-green-400 shadow-lg shadow-green-100 scale-[1.02]'
-                    : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-md active:scale-[0.98]'
+                    : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-md'
                     }`}
             >
                 <div className="flex items-center justify-between gap-2">
@@ -187,7 +183,7 @@ const SortableSectionHeader: React.FC<{
         transition,
         isDragging,
     } = useSortable({
-        id: `section_${group.id} `,
+        id: `section_${group.id}`,
         disabled: isUncategorized,
     });
 
@@ -276,7 +272,7 @@ const SectionContent: React.FC<{
     copiedId: string | null;
     collapsed: boolean;
 }> = ({ groupId, records, onCopy, onEdit, onDelete, onAddRecord, copiedId, collapsed }) => {
-    const { setNodeRef, isOver } = useDroppable({ id: `group_${groupId} ` });
+    const { setNodeRef, isOver } = useDroppable({ id: `group_${groupId}` });
 
     if (collapsed) return null;
 
@@ -476,7 +472,7 @@ const WorkRecordModal: React.FC<{
     const allSortableIds = useMemo(() => {
         const ids: string[] = [];
         for (const g of orderedGroups) {
-            ids.push(`section_${g.id} `);
+            ids.push(`section_${g.id}`);
             const recs = recordsByGroup[g.id] || [];
             recs.forEach(r => ids.push(r.id));
         }
@@ -700,7 +696,7 @@ const WorkRecordModal: React.FC<{
                         >
                             <div className="max-w-6xl mx-auto">
                                 <SortableContext
-                                    items={orderedGroups.map(g => `section_${g.id} `)}
+                                    items={orderedGroups.map(g => `section_${g.id}`)}
                                     strategy={verticalListSortingStrategy}
                                 >
                                     {orderedGroups.map((group, idx) => {
@@ -758,7 +754,7 @@ const WorkRecordModal: React.FC<{
                                 {activeSectionId ? (
                                     <div className="bg-white rounded-xl shadow-2xl border-2 border-purple-400 px-4 py-3 opacity-90 max-w-md">
                                         <span className="font-bold text-gray-800 text-base">
-                                            {groups.find(g => `section_${g.id} ` === activeSectionId)?.title || '段落'}
+                                            {groups.find(g => `section_${g.id}` === activeSectionId)?.title || '段落'}
                                         </span>
                                     </div>
                                 ) : null}
