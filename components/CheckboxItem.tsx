@@ -46,17 +46,6 @@ export const CheckboxItem: React.FC<Props> = ({ task, isChecked, onToggle }) => 
         <div className="dopamine-ripple" />
       )}
 
-      {/* Sparkle particles */}
-      {justChecked && (
-        <>
-          <div className="sparkle sparkle-1" />
-          <div className="sparkle sparkle-2" />
-          <div className="sparkle sparkle-3" />
-          <div className="sparkle sparkle-4" />
-          <div className="sparkle sparkle-5" />
-          <div className="sparkle sparkle-6" />
-        </>
-      )}
 
       {/* Checkbox - only this is clickable for toggling */}
       <div

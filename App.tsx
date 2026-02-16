@@ -746,16 +746,7 @@ const EditModeTask: React.FC<{
       >
         {/* Dopamine ripple */}
         {justChecked && <div className="dopamine-ripple" />}
-        {justChecked && (
-          <>
-            <div className="sparkle sparkle-1" />
-            <div className="sparkle sparkle-2" />
-            <div className="sparkle sparkle-3" />
-            <div className="sparkle sparkle-4" />
-            <div className="sparkle sparkle-5" />
-            <div className="sparkle sparkle-6" />
-          </>
-        )}
+
 
         {/* Drag handle */}
         <div {...dragHandleProps} className="flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none" onClick={e => e.stopPropagation()}>
