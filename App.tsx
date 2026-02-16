@@ -253,6 +253,17 @@ const App: React.FC = () => {
     });
   };
 
+  const clearAllShiftChecks = () => {
+    setCheckedItems(prev => {
+      const next = { ...prev };
+      shiftSections.forEach(section => {
+        basicTasks.forEach(t => { delete next[getNamespacedId(section.id, t.id)]; });
+        section.tasks.forEach(t => { delete next[t.id]; });
+      });
+      return next;
+    });
+  };
+
   const activeShiftData = visibleShiftSections.find(s => s.id === selectedShiftId);
 
   const resetConfig = () => {
@@ -512,6 +523,14 @@ const App: React.FC = () => {
             >
               <RotateCcw size={13} />
               一鍵清空該時段
+            </button>
+            <button
+              onClick={clearAllShiftChecks}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-200 transition-all"
+              title="清空所有時段勾選"
+            >
+              <RotateCcw size={13} />
+              一鍵清空所有時段
             </button>
           </div>
 
