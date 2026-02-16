@@ -119,7 +119,7 @@ const SortableRecordItem: React.FC<{
             {/* Main clickable area */}
             <button
                 onClick={() => onCopy(record)}
-                className={`flex-grow text-left px-3 py-2.5 rounded-xl border-2 transition-all duration-300 min-w-0 cursor-grab active:cursor-grabbing ${isCopied
+                className={`flex-grow text-left px-3 py-2.5 rounded-xl border-2 transition-all duration-300 min-w-0 md:cursor-grab md:active:cursor-grabbing ${isCopied
                     ? 'bg-green-50 border-green-400 shadow-lg shadow-green-100 scale-[1.02]'
                     : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-md'
                     }`}
@@ -209,7 +209,7 @@ const SortableSectionHeader: React.FC<{
                     <div
                         {...attributes}
                         {...listeners}
-                        className="flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none p-0.5 opacity-0 group-hover/section:opacity-100 transition-opacity"
+                        className="flex-shrink-0 md:cursor-grab md:active:cursor-grabbing md:touch-none text-gray-300 hover:text-gray-500 p-0.5 opacity-0 group-hover/section:opacity-100 transition-opacity"
                     >
                         <GripHorizontal size={14} />
                     </div>

@@ -849,7 +849,7 @@ const HeaderWithContextMenu: React.FC<{
     <>
       <div
         {...dragHandleProps}
-        className="mt-4 mb-2 group flex items-center gap-2 cursor-grab active:cursor-grabbing touch-none"
+        className="mt-4 mb-2 group flex items-center gap-2 md:cursor-grab md:active:cursor-grabbing md:touch-none"
         onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY }); }}
       >
         <h4 className="font-bold text-gray-800 flex items-center gap-2">
@@ -901,7 +901,7 @@ const EditModeTask: React.FC<{
     <>
       <div
         {...dragHandleProps}
-        className={`group flex items-start gap-3 p-3 rounded-lg border transition-all duration-200 relative overflow-hidden flex-wrap cursor-grab active:cursor-grabbing touch-none ${isChecked
+        className={`group flex items-start gap-3 p-3 rounded-lg border transition-all duration-200 relative overflow-hidden flex-wrap md:cursor-grab md:active:cursor-grabbing md:touch-none ${isChecked
           ? 'bg-blue-50 border-blue-200 shadow-sm'
           : 'bg-white border-gray-100 hover:border-gray-300 hover:bg-gray-50'
           }`}
@@ -1229,7 +1229,7 @@ const EditableTask: React.FC<{
   if (isHandover) {
     return (
       <>
-        <div {...dragHandleProps} className="flex flex-col p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all group relative cursor-grab active:cursor-grabbing touch-none"
+        <div {...dragHandleProps} className="flex flex-col p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all group relative md:cursor-grab md:active:cursor-grabbing md:touch-none"
           onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY }); }}
         >
           <div className="flex items-start justify-between gap-3">
