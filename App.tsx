@@ -541,7 +541,9 @@ const App: React.FC = () => {
                   />
                 ))}
               </DroppableSection>
+            </div>
 
+            <div className="order-3 lg:order-none">
               <DroppableSection
                 id={activeShiftData?.id || selectedShiftId}
                 title={activeShiftData?.title || '值班項目'}
@@ -566,7 +568,9 @@ const App: React.FC = () => {
                   />
                 ))}
               </DroppableSection>
+            </div>
 
+            <div className="order-1 lg:order-none">
               <DroppableSection
                 id="handover"
                 title="近期注意、交接事項"
