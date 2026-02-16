@@ -791,14 +791,11 @@ const WorkRecordModal: React.FC<{
                         <div className="flex items-center gap-2 flex-shrink-0">
                             <button
                                 onClick={() => {
-                                    for (let i = linkToast.urls.length - 1; i >= 0; i--) {
-                                        const a = document.createElement('a');
-                                        a.href = linkToast.urls[i];
-                                        a.target = '_blank';
-                                        a.rel = 'noopener noreferrer';
-                                        document.body.appendChild(a);
-                                        a.click();
-                                        document.body.removeChild(a);
+                                    window.open(linkToast.urls[0], '_blank');
+                                    for (let i = 1; i < linkToast.urls.length; i++) {
+                                        setTimeout(() => {
+                                            window.open(linkToast.urls[i], '_blank');
+                                        }, i * 300);
                                     }
                                     setLinkToast(null);
                                 }}

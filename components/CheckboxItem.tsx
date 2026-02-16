@@ -103,15 +103,12 @@ export const CheckboxItem: React.FC<Props> = ({ task, isChecked, onToggle }) => 
                 onClick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  // 用 <a> 元素點擊開啟，避免被 popup blocker 攔截
-                  for (let i = urls.length - 1; i >= 0; i--) {
-                    const a = document.createElement('a');
-                    a.href = urls[i];
-                    a.target = '_blank';
-                    a.rel = 'noopener noreferrer';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
+                  // 第一個直接開（不會被擋），其餘延遲開啟
+                  window.open(urls[0], '_blank');
+                  for (let i = 1; i < urls.length; i++) {
+                    setTimeout(() => {
+                      window.open(urls[i], '_blank');
+                    }, i * 300);
                   }
                   if (!isChecked) {
                     setJustChecked(true);

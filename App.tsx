@@ -926,14 +926,11 @@ const EditModeTask: React.FC<{
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    for (let i = urls.length - 1; i >= 0; i--) {
-                      const a = document.createElement('a');
-                      a.href = urls[i];
-                      a.target = '_blank';
-                      a.rel = 'noopener noreferrer';
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
+                    window.open(urls[0], '_blank');
+                    for (let i = 1; i < urls.length; i++) {
+                      setTimeout(() => {
+                        window.open(urls[i], '_blank');
+                      }, i * 300);
                     }
                     if (!isChecked && onToggle) {
                       setJustChecked(true);
@@ -1189,14 +1186,11 @@ const EditableTask: React.FC<{
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      for (let i = urls.length - 1; i >= 0; i--) {
-                        const a = document.createElement('a');
-                        a.href = urls[i];
-                        a.target = '_blank';
-                        a.rel = 'noopener noreferrer';
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
+                      window.open(urls[0], '_blank');
+                      for (let i = 1; i < urls.length; i++) {
+                        setTimeout(() => {
+                          window.open(urls[i], '_blank');
+                        }, i * 300);
                       }
                     }}
                     className="text-gray-400 hover:text-indigo-600 p-1 bg-gray-50 rounded-lg"
