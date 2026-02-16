@@ -723,6 +723,14 @@ const DroppableSection: React.FC<{
         </div>
         <div className="p-4 space-y-3 flex-grow overflow-y-auto">
           {children}
+          {showAdd && (
+            <button
+              onClick={onAdd}
+              className="w-full py-3 border-2 border-dashed border-gray-200 hover:border-blue-400 hover:bg-blue-50/50 rounded-xl text-gray-400 hover:text-blue-500 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium group mt-2"
+            >
+              <Plus size={16} className="group-hover:scale-110 transition-transform" /> 新增項目
+            </button>
+          )}
         </div>
       </div>
     </SortableContext>
