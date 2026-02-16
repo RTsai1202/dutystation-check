@@ -46,7 +46,6 @@ import {
   Archive,
   ChevronDown,
   ChevronUp,
-  GripVertical,
   Lock,
   Info,
 } from 'lucide-react';
@@ -322,7 +321,7 @@ const App: React.FC = () => {
 
   // --- DnD Setup ---
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
   const [activeTask, setActiveTask] = useState<TaskItem | null>(null);
@@ -822,12 +821,10 @@ const HeaderWithContextMenu: React.FC<{
   return (
     <>
       <div
-        className="mt-4 mb-2 group flex items-center gap-2"
+        {...dragHandleProps}
+        className="mt-4 mb-2 group flex items-center gap-2 cursor-grab active:cursor-grabbing touch-none"
         onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY }); }}
       >
-        <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none">
-          <GripVertical size={16} />
-        </div>
         <h4 className="font-bold text-gray-800 flex items-center gap-2">
           <span className="w-1 h-4 bg-gray-500 rounded-full"></span>
           {task.label}
@@ -863,7 +860,8 @@ const EditModeTask: React.FC<{
   return (
     <>
       <div
-        className={`group flex items-start gap-3 p-3 rounded-lg border transition-all duration-200 relative overflow-hidden flex-wrap ${isChecked
+        {...dragHandleProps}
+        className={`group flex items-start gap-3 p-3 rounded-lg border transition-all duration-200 relative overflow-hidden flex-wrap cursor-grab active:cursor-grabbing touch-none ${isChecked
           ? 'bg-blue-50 border-blue-200 shadow-sm'
           : 'bg-white border-gray-100 hover:border-gray-300 hover:bg-gray-50'
           }`}
@@ -872,11 +870,6 @@ const EditModeTask: React.FC<{
         {/* Dopamine ripple */}
         {justChecked && <div className="dopamine-ripple" />}
 
-
-        {/* Drag handle */}
-        <div {...dragHandleProps} className="flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none" onClick={e => e.stopPropagation()}>
-          <GripVertical size={16} />
-        </div>
 
         {/* Checkbox - only this toggles */}
         <div
