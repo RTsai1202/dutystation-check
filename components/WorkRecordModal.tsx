@@ -264,9 +264,10 @@ const SectionContent: React.FC<{
     onCopy: (record: WorkRecord) => void;
     onEdit: (record: WorkRecord) => void;
     onDelete: (id: string) => void;
+    onAddRecord: (groupId: string) => void;
     copiedId: string | null;
     collapsed: boolean;
-}> = ({ groupId, records, onCopy, onEdit, onDelete, copiedId, collapsed }) => {
+}> = ({ groupId, records, onCopy, onEdit, onDelete, onAddRecord, copiedId, collapsed }) => {
     const { setNodeRef, isOver } = useDroppable({ id: `group_${groupId}` });
 
     if (collapsed) return null;
@@ -277,8 +278,14 @@ const SectionContent: React.FC<{
             className={`pl-6 pb-4 transition-all duration-200 ${isOver ? 'bg-blue-50/40 rounded-xl' : ''}`}
         >
             {records.length === 0 ? (
-                <div className={`text-center py-4 text-sm italic rounded-xl border-2 border-dashed transition-colors ${isOver ? 'text-blue-400 border-blue-300 bg-blue-50' : 'text-gray-300 border-gray-200'}`}>
-                    {isOver ? '放在這裡' : '拖曳記錄到此處，或點擊 + 新增'}
+                <div
+                    onClick={() => onAddRecord(groupId)}
+                    className={`text-center py-4 text-sm italic rounded-xl border-2 border-dashed transition-colors cursor-pointer group/empty ${isOver ? 'text-blue-400 border-blue-300 bg-blue-50' : 'text-gray-300 border-gray-200 hover:text-blue-400 hover:border-blue-300 hover:bg-blue-50/50'}`}
+                >
+                    <div className="flex items-center justify-center gap-1.5">
+                        <Plus size={16} className={`transition-transform group-hover/empty:scale-110 ${isOver ? 'text-blue-400' : ''}`} />
+                        {isOver ? '放在這裡' : '點擊新增第一筆記錄'}
+                    </div>
                 </div>
             ) : (
                 <SortableContext items={records.map(r => r.id)} strategy={verticalListSortingStrategy}>
@@ -705,6 +712,7 @@ const WorkRecordModal: React.FC<{
                                                     onCopy={handleCopy}
                                                     onEdit={setEditingRecord}
                                                     onDelete={handleDeleteRecord}
+                                                    onAddRecord={handleAddRecord}
                                                     copiedId={copiedId}
                                                     collapsed={isCollapsed}
                                                 />
