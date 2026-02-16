@@ -915,7 +915,15 @@ const EditModeTask: React.FC<{
             href={task.link}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              // 點擊外部連結時自動完成任務
+              if (!isChecked && onToggle) {
+                setJustChecked(true);
+                setTimeout(() => setJustChecked(false), 1500);
+                onToggle();
+              }
+            }}
             className="flex-shrink-0 text-gray-400 hover:text-blue-600 p-1.5 ml-2 rounded-md hover:bg-blue-50 transition-colors"
             title="開啟連結"
           >
