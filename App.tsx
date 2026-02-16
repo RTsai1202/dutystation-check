@@ -330,9 +330,17 @@ const App: React.FC = () => {
     }
   };
 
-  // --- DnD Setup ---
+  // --- Mobile detection ---
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // --- DnD Setup (disabled on mobile) ---
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: isMobile ? Infinity : 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
   const [activeTask, setActiveTask] = useState<TaskItem | null>(null);
@@ -495,7 +503,7 @@ const App: React.FC = () => {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="hidden md:grid grid-cols-2 md:grid-cols-4 gap-3">
             {shiftSections.map((section) => (
               <ShiftTabDroppable
                 key={section.id}
@@ -507,7 +515,7 @@ const App: React.FC = () => {
             ))}
           </div>
 
-          <div className="flex justify-end gap-2">
+          <div className="hidden md:flex justify-end gap-2">
             <button
               onClick={() => setShowWorkRecordModal(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-gray-200 hover:border-blue-200 transition-all"
@@ -535,7 +543,7 @@ const App: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="order-2 lg:order-none">
+            <div className="hidden md:block order-2 lg:order-none">
               <DroppableSection
                 id="basic"
                 title="基本事項"
@@ -562,7 +570,7 @@ const App: React.FC = () => {
               </DroppableSection>
             </div>
 
-            <div className="order-3 lg:order-none">
+            <div className="hidden md:block order-3 lg:order-none">
               <DroppableSection
                 id={activeShiftData?.id || selectedShiftId}
                 title={activeShiftData?.title || '值班項目'}
