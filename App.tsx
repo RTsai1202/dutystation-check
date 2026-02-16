@@ -48,6 +48,7 @@ import {
   ChevronUp,
   Lock,
   Info,
+  Copy,
 } from 'lucide-react';
 import Markdown from 'react-markdown';
 
@@ -565,6 +566,7 @@ const App: React.FC = () => {
                     setEditing={() => setEditingTaskId(editingTaskId === task.id ? null : task.id)}
                     onDelete={() => handleDeleteTask(task.id, 'basic')}
                     onUpdate={(upd) => handleUpdateTask(task.id, 'basic', upd)}
+                    workRecords={workRecords}
                   />
                 ))}
               </DroppableSection>
@@ -592,6 +594,7 @@ const App: React.FC = () => {
                     setEditing={() => setEditingTaskId(editingTaskId === task.id ? null : task.id)}
                     onDelete={() => handleDeleteTask(task.id, activeShiftData.id)}
                     onUpdate={(upd) => handleUpdateTask(task.id, activeShiftData.id, upd)}
+                    workRecords={workRecords}
                   />
                 ))}
               </DroppableSection>
@@ -630,6 +633,7 @@ const App: React.FC = () => {
                     onSelectStatus={(statusId: string) => setHandoverStatus(item.id, statusId)}
                     onUpdateStatuses={setStatusConfigs}
                     isHandover
+                    workRecords={workRecords}
                   />
                 ))}
                 {handoverItems.length === 0 && (
@@ -870,7 +874,11 @@ const EditModeTask: React.FC<{
   dragHandleProps?: any;
   onEdit: () => void;
   onDelete: () => void;
-}> = ({ task, isChecked, onToggle, dragHandleProps, onEdit, onDelete }) => {
+  linkedRecords?: WorkRecord[];
+  onCopyRecord?: (record: WorkRecord, pendingUrls?: string[]) => void;
+  showRecordPicker?: { urls: string[] } | false;
+  setShowRecordPicker?: (v: { urls: string[] } | false) => void;
+}> = ({ task, isChecked, onToggle, dragHandleProps, onEdit, onDelete, linkedRecords, onCopyRecord, showRecordPicker, setShowRecordPicker }) => {
   const [justChecked, setJustChecked] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
   const [showNotes, setShowNotes] = useState(false);
@@ -945,8 +953,24 @@ const EditModeTask: React.FC<{
         </div>
 
         {/* Action icons - inline */}
-        {(task.notes || task.link) && (
+        {(task.notes || task.link || (linkedRecords && linkedRecords.length > 0)) && (
           <div className="flex-shrink-0 flex items-center gap-1 ml-1">
+            {linkedRecords && linkedRecords.length > 0 && !task.link && onCopyRecord && setShowRecordPicker && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (linkedRecords.length === 1) {
+                    onCopyRecord(linkedRecords[0]);
+                  } else {
+                    setShowRecordPicker(showRecordPicker ? false : { urls: [] });
+                  }
+                }}
+                className="text-gray-400 hover:text-teal-600 p-1.5 rounded-md hover:bg-teal-50 transition-colors"
+                title={linkedRecords.length === 1 ? `複製：${linkedRecords[0].title}` : `複製工作紀錄（${linkedRecords.length} 筆）`}
+              >
+                <Copy size={16} />
+              </button>
+            )}
             {task.notes && (
               <button
                 onClick={(e) => { e.stopPropagation(); setShowNotes(!showNotes); }}
@@ -961,28 +985,37 @@ const EditModeTask: React.FC<{
             )}
             {task.link && (() => {
               const urls = task.link!.split('\n').map((u: string) => u.trim()).filter((u: string) => u.length > 0);
+              const hasLinkedRecords = linkedRecords && linkedRecords.length > 0;
               return (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    for (let i = urls.length - 1; i >= 1; i--) {
-                      const url = urls[i];
+                    if (hasLinkedRecords && onCopyRecord && setShowRecordPicker) {
+                      if (linkedRecords!.length === 1) {
+                        onCopyRecord(linkedRecords![0], urls);
+                      } else {
+                        setShowRecordPicker({ urls });
+                      }
+                    } else {
+                      for (let i = urls.length - 1; i >= 1; i--) {
+                        const url = urls[i];
+                        setTimeout(() => {
+                          window.open(url, '_blank');
+                        }, (urls.length - i) * 300);
+                      }
                       setTimeout(() => {
-                        window.open(url, '_blank');
-                      }, (urls.length - i) * 300);
+                        window.open(urls[0], '_blank');
+                      }, urls.length * 300);
                     }
-                    setTimeout(() => {
-                      window.open(urls[0], '_blank');
-                    }, urls.length * 300);
                     if (!isChecked && onToggle) {
                       setJustChecked(true);
                       setTimeout(() => setJustChecked(false), 1500);
                       onToggle();
                     }
                   }}
-                  className="text-gray-400 hover:text-blue-600 p-1.5 rounded-md hover:bg-blue-50 transition-colors"
-                  title={urls.length > 1 ? `開啟 ${urls.length} 個連結` : '開啟連結'}
+                  className={`p-1.5 rounded-md transition-colors ${hasLinkedRecords ? 'text-gray-400 hover:text-teal-600 hover:bg-teal-50' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'}`}
+                  title={hasLinkedRecords ? '複製紀錄並開啟連結' : (urls.length > 1 ? `開啟 ${urls.length} 個連結` : '開啟連結')}
                 >
                   <ExternalLink size={16} />
                 </button>
@@ -1057,6 +1090,10 @@ const EditModeTask: React.FC<{
         @keyframes sp4 { 0% { transform: translate(0,0) scale(0); opacity: 1; } 60% { opacity: 0.8; } 100% { transform: translate(-24px,22px) scale(1.4); opacity: 0; } }
         @keyframes sp5 { 0% { transform: translate(0,0) scale(0); opacity: 1; } 60% { opacity: 0.8; } 100% { transform: translate(32px,-10px) scale(1.7); opacity: 0; } }
         @keyframes sp6 { 0% { transform: translate(0,0) scale(0); opacity: 1; } 60% { opacity: 0.8; } 100% { transform: translate(-18px,26px) scale(1.3); opacity: 0; } }
+        .animate-copy-toast-in { animation: copyToastIn 0.3s ease-out; }
+        @keyframes copyToastIn { 0% { opacity: 0; transform: translate(-50%, 10px); } 100% { opacity: 1; transform: translate(-50%, 0); } }
+        .animate-copy-success-pop { animation: copySuccessPop 0.4s ease-out; }
+        @keyframes copySuccessPop { 0% { transform: scale(0); } 60% { transform: scale(1.2); } 100% { transform: scale(1); } }
       `}</style>
     </>
   );
@@ -1095,9 +1132,117 @@ const EditableTask: React.FC<{
   isHandover?: boolean;
   dragHandleProps?: any;
   isDragging?: boolean;
-}> = ({ task, isEditMode, isChecked, onToggle, isEditing, setEditing, onDelete, onUpdate, statusConfigs, onSelectStatus, onUpdateStatuses, isHandover, dragHandleProps }) => {
+  workRecords?: WorkRecord[];
+}> = ({ task, isEditMode, isChecked, onToggle, isEditing, setEditing, onDelete, onUpdate, statusConfigs, onSelectStatus, onUpdateStatuses, isHandover, dragHandleProps, workRecords }) => {
   const currentStatus = statusConfigs?.find(s => s.id === task.statusId);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+  const [copyToast, setCopyToast] = useState<{ title: string; content: string; urls: string[] } | null>(null);
+  const [showRecordPicker, setShowRecordPicker] = useState<{ urls: string[] } | false>(false);
+
+  const linkedRecords = useMemo(() => {
+    if (!task.linkedRecordIds?.length || !workRecords?.length) return [];
+    return task.linkedRecordIds
+      .map((id: string) => workRecords.find(r => r.id === id))
+      .filter(Boolean) as WorkRecord[];
+  }, [task.linkedRecordIds, workRecords]);
+
+  const handleCopyRecord = useCallback(async (record: WorkRecord, pendingUrls?: string[]) => {
+    try {
+      await navigator.clipboard.writeText(record.content);
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = record.content;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+    setCopyToast({ title: record.title, content: record.content, urls: pendingUrls || [] });
+    setShowRecordPicker(false);
+  }, []);
+
+  useEffect(() => {
+    if (!copyToast) return;
+    if (copyToast.urls.length > 0) return; // Don't auto-dismiss when there are URLs to open
+    const timer = setTimeout(() => setCopyToast(null), 2000);
+    return () => clearTimeout(timer);
+  }, [copyToast]);
+
+  const recordPickerPortal = showRecordPicker && linkedRecords.length > 1
+    ? ReactDOM.createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={() => setShowRecordPicker(false)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Copy size={16} className="text-teal-500" />
+                <span className="font-bold text-gray-800 text-sm">選擇工作紀錄</span>
+              </div>
+              <button onClick={() => setShowRecordPicker(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-3 space-y-1 max-h-[60vh] overflow-y-auto">
+              {linkedRecords.map(record => (
+                <button
+                  key={record.id}
+                  onClick={() => handleCopyRecord(record, showRecordPicker.urls)}
+                  className="w-full text-left px-4 py-3 rounded-xl hover:bg-teal-50 transition-colors group"
+                >
+                  <div className="font-medium text-sm text-gray-800 group-hover:text-teal-700">{record.title}</div>
+                  <div className="text-xs text-gray-400 mt-1 truncate">{record.content.slice(0, 60)}{record.content.length > 60 ? '...' : ''}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )
+    : null;
+
+  const copyToastPortal = copyToast
+    ? ReactDOM.createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4" onClick={() => setCopyToast(null)}>
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" />
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 pt-5 pb-3 flex flex-col items-center text-center">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center animate-copy-success-pop mb-3">
+                <Check size={24} className="text-green-600" />
+              </div>
+              <div className="text-base font-bold text-gray-800">已複製到剪貼簿</div>
+              <div className="text-sm text-gray-600 mt-1 font-medium">{copyToast.title}</div>
+              <div className="text-xs text-gray-400 mt-1 line-clamp-2 max-w-[280px]">{copyToast.content.slice(0, 100)}{copyToast.content.length > 100 ? '...' : ''}</div>
+            </div>
+            <div className="px-5 pb-4 pt-2 flex flex-col gap-2">
+              {copyToast.urls.length > 0 && (
+                <button
+                  onClick={() => {
+                    const urls = copyToast.urls;
+                    for (let i = urls.length - 1; i >= 1; i--) {
+                      const url = urls[i];
+                      setTimeout(() => { window.open(url, '_blank'); }, (urls.length - i) * 300);
+                    }
+                    setTimeout(() => { window.open(urls[0], '_blank'); }, urls.length * 300);
+                    setCopyToast(null);
+                  }}
+                  className="w-full py-2.5 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  <ExternalLink size={16} />
+                  {copyToast.urls.length > 1 ? `開啟 ${copyToast.urls.length} 個相關網站` : '開啟相關網站'}
+                </button>
+              )}
+              <button
+                onClick={() => setCopyToast(null)}
+                className="w-full py-2 text-gray-500 hover:text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors text-sm"
+              >
+                關閉
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )
+    : null;
 
   // ESC to cancel editing, Cmd/Ctrl+Enter to save
   useEffect(() => {
@@ -1188,6 +1333,36 @@ const EditableTask: React.FC<{
               placeholder={"支援 Markdown 格式，例如：\n# 標題\n- 清單項目\n**粗體** *斜體*"}
             />
           </div>
+          {workRecords && workRecords.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Copy size={14} className="text-teal-500" />
+                <span className="text-[10px] font-bold text-teal-600 uppercase tracking-wider">連結工作紀錄</span>
+              </div>
+              <div className="max-h-[160px] overflow-y-auto border border-teal-200 rounded-lg bg-teal-50/30 p-2 space-y-1">
+                {workRecords.map(record => {
+                  const isLinked = task.linkedRecordIds?.includes(record.id) || false;
+                  return (
+                    <label key={record.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${isLinked ? 'bg-teal-100' : 'hover:bg-teal-50'}`}>
+                      <input
+                        type="checkbox"
+                        checked={isLinked}
+                        onChange={() => {
+                          const current = task.linkedRecordIds || [];
+                          const next = isLinked
+                            ? current.filter((id: string) => id !== record.id)
+                            : [...current, record.id];
+                          onUpdate({ linkedRecordIds: next.length > 0 ? next : undefined });
+                        }}
+                        className="accent-teal-600 w-4 h-4"
+                      />
+                      <span className="text-xs text-gray-700 truncate">{record.title}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <div className="flex justify-between items-center pt-2">
             <button onClick={onDelete} className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1 text-xs">
               <Trash2 size={16} /> 刪除
@@ -1214,14 +1389,22 @@ const EditableTask: React.FC<{
       );
     }
     return (
-      <EditModeTask
-        task={task}
-        isChecked={isChecked}
-        onToggle={onToggle}
-        dragHandleProps={dragHandleProps}
-        onEdit={setEditing}
-        onDelete={onDelete}
-      />
+      <>
+        <EditModeTask
+          task={task}
+          isChecked={isChecked}
+          onToggle={onToggle}
+          dragHandleProps={dragHandleProps}
+          onEdit={setEditing}
+          onDelete={onDelete}
+          linkedRecords={linkedRecords}
+          onCopyRecord={handleCopyRecord}
+          showRecordPicker={showRecordPicker}
+          setShowRecordPicker={setShowRecordPicker}
+        />
+        {recordPickerPortal}
+        {copyToastPortal}
+      </>
     );
   }
 
@@ -1238,24 +1421,49 @@ const EditableTask: React.FC<{
               {task.subtext && <div className="text-xs text-gray-500 leading-relaxed whitespace-pre-wrap">{task.subtext}</div>}
             </div>
             <div className="flex flex-col gap-1 items-end">
+              {linkedRecords.length > 0 && !task.link && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (linkedRecords.length === 1) {
+                      handleCopyRecord(linkedRecords[0]);
+                    } else {
+                      setShowRecordPicker(showRecordPicker ? false : { urls: [] });
+                    }
+                  }}
+                  className="text-gray-400 hover:text-teal-600 p-1 bg-gray-50 rounded-lg transition-colors"
+                  title={linkedRecords.length === 1 ? `複製：${linkedRecords[0].title}` : `複製工作紀錄（${linkedRecords.length} 筆）`}
+                >
+                  <Copy size={16} />
+                </button>
+              )}
               {task.link && (() => {
                 const urls = task.link!.split('\n').map((u: string) => u.trim()).filter((u: string) => u.length > 0);
+                const hasLinkedRecords = linkedRecords.length > 0;
                 return (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      for (let i = urls.length - 1; i >= 1; i--) {
-                        const url = urls[i];
+                      if (hasLinkedRecords) {
+                        if (linkedRecords.length === 1) {
+                          handleCopyRecord(linkedRecords[0], urls);
+                        } else {
+                          setShowRecordPicker({ urls });
+                        }
+                      } else {
+                        for (let i = urls.length - 1; i >= 1; i--) {
+                          const url = urls[i];
+                          setTimeout(() => {
+                            window.open(url, '_blank');
+                          }, (urls.length - i) * 300);
+                        }
                         setTimeout(() => {
-                          window.open(url, '_blank');
-                        }, (urls.length - i) * 300);
+                          window.open(urls[0], '_blank');
+                        }, urls.length * 300);
                       }
-                      setTimeout(() => {
-                        window.open(urls[0], '_blank');
-                      }, urls.length * 300);
                     }}
-                    className="text-gray-400 hover:text-indigo-600 p-1 bg-gray-50 rounded-lg"
-                    title={urls.length > 1 ? `開啟 ${urls.length} 個連結` : '開啟連結'}
+                    className={`p-1 bg-gray-50 rounded-lg transition-colors ${hasLinkedRecords ? 'text-gray-400 hover:text-teal-600 hover:bg-teal-50' : 'text-gray-400 hover:text-indigo-600'}`}
+                    title={hasLinkedRecords ? '複製紀錄並開啟連結' : (urls.length > 1 ? `開啟 ${urls.length} 個連結` : '開啟連結')}
                   >
                     <ExternalLink size={16} />
                   </button>
@@ -1287,6 +1495,8 @@ const EditableTask: React.FC<{
           </div>
         </div>
         {ctxMenu && <ContextMenu x={ctxMenu.x} y={ctxMenu.y} onEdit={setEditing} onDelete={onDelete} onClose={() => setCtxMenu(null)} />}
+        {recordPickerPortal}
+        {copyToastPortal}
       </>
     );
   }

@@ -5,6 +5,7 @@ export interface TaskItem {
   link?: string;
   subtext?: string;
   notes?: string;        // Markdown 筆記內容
+  linkedRecordIds?: string[];  // 連結的工作紀錄 ID 陣列
   isHeader?: boolean;
   showOnDays?: number[];    // 0-6 (Sunday-Saturday)
   showInMonths?: number[];  // 1-12 (January-December)
