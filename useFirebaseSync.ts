@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { ref, onValue, set } from 'firebase/database';
+import { ref, onValue, set, get } from 'firebase/database';
 import { database } from './firebase';
 import {
     TaskItem,
@@ -59,52 +59,65 @@ export function useFirebaseSync(): UseFirebaseSyncResult {
     const [data, setData] = useState<FirebaseData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // 防止本地寫回觸發不必要的 re-render
-    const isLocalWrite = useRef(false);
+    // 記錄最後一次本地寫入的時間，用來忽略寫入後立即觸發的 onValue
+    const lastWriteTime = useRef(0);
+    const WRITE_DEBOUNCE_MS = 2000; // 寫入後 2 秒內的回呼忽略
 
     useEffect(() => {
-        // 監聽整個 dutystation 根路徑 — 一次取得所有資料
+        // 第一步：用 get() 一次性讀取，確保首次載入可靠
         const rootRef = ref(database, DB_PATH);
+        get(rootRef).then((snapshot) => {
+            const val = snapshot.val();
+            setData(parseFirebaseSnapshot(val));
+            setIsLoading(false);
+        }).catch((error) => {
+            console.error('Firebase 首次讀取失敗:', error);
+            setData(parseFirebaseSnapshot(null));
+            setIsLoading(false);
+        });
+
+        // 第二步：設定 onValue 監聽，用於其他裝置的即時同步
         const unsub = onValue(rootRef, (snapshot) => {
-            if (isLocalWrite.current) {
-                isLocalWrite.current = false;
+            // 如果是剛剛本地寫入觸發的回呼，忽略它
+            const timeSinceWrite = Date.now() - lastWriteTime.current;
+            if (timeSinceWrite < WRITE_DEBOUNCE_MS) {
                 return;
             }
             const val = snapshot.val();
             setData(parseFirebaseSnapshot(val));
-            setIsLoading(false);
         }, (error) => {
-            console.error('Firebase 連線錯誤:', error);
-            // 即使連線失敗也要解除 loading，使用預設資料
-            setData(parseFirebaseSnapshot(null));
-            setIsLoading(false);
+            console.error('Firebase 監聽錯誤:', error);
         });
 
         return () => unsub();
     }, []);
 
+    const markWrite = () => {
+        lastWriteTime.current = Date.now();
+    };
+
     const saveConfig = useCallback((basic: TaskItem[], shifts: ShiftSection[], statuses: StatusConfig[]) => {
-        isLocalWrite.current = true;
+        markWrite();
         set(ref(database, `${DB_PATH}/config`), { basic, shifts, statuses });
     }, []);
 
     const saveState = useCallback((checked: Record<string, boolean>, handover: HandoverItem[]) => {
-        isLocalWrite.current = true;
+        markWrite();
         set(ref(database, `${DB_PATH}/state`), { checkedItems: checked, handoverItems: handover });
     }, []);
 
     const saveWorkRecords = useCallback((records: WorkRecord[]) => {
-        isLocalWrite.current = true;
+        markWrite();
         set(ref(database, `${DB_PATH}/workRecords`), records);
     }, []);
 
     const saveWorkRecordGroups = useCallback((groups: WorkRecordGroup[]) => {
-        isLocalWrite.current = true;
+        markWrite();
         set(ref(database, `${DB_PATH}/workRecordGroups`), groups);
     }, []);
 
     const saveTrash = useCallback((items: TrashedItem[]) => {
-        isLocalWrite.current = true;
+        markWrite();
         set(ref(database, `${DB_PATH}/trash`), items);
     }, []);
 
