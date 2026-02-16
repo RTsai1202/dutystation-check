@@ -70,7 +70,7 @@ export const CheckboxItem: React.FC<Props> = ({ task, isChecked, onToggle }) => 
 
       {/* Content area - not clickable for toggle */}
       <div className="flex-grow min-w-0">
-        <div className={`text-base leading-snug select-none ${isChecked ? 'text-gray-800 font-medium' : 'text-gray-600'}`}>
+        <div className={`text-base leading-snug select-none whitespace-pre-wrap ${isChecked ? 'text-gray-800 font-medium' : 'text-gray-600'}`}>
           {task.label}
         </div>
         {task.subtext && (

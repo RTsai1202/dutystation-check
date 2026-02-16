@@ -830,7 +830,7 @@ const EditModeTask: React.FC<{
 
         {/* Content */}
         <div className="flex-grow min-w-0">
-          <div className={`text-base leading-snug select-none ${isChecked ? 'text-gray-800 font-medium' : 'text-gray-600'}`}>
+          <div className={`text-base leading-snug select-none whitespace-pre-wrap ${isChecked ? 'text-gray-800 font-medium' : 'text-gray-600'}`}>
             {task.label}
           </div>
           {task.subtext && <div className="text-xs text-gray-500 mt-1">{task.subtext}</div>}
@@ -1021,7 +1021,7 @@ const EditableTask: React.FC<{
       <div className="flex flex-col p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all group relative">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-grow space-y-1">
-            <div className="text-base font-bold text-gray-800 leading-tight">{task.label}</div>
+            <div className="text-base font-bold text-gray-800 leading-tight whitespace-pre-wrap">{task.label}</div>
             {task.subtext && <div className="text-xs text-gray-500 leading-relaxed">{task.subtext}</div>}
           </div>
           <div className="flex flex-col gap-1 items-end">
