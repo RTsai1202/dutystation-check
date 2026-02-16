@@ -49,12 +49,7 @@ import {
   GripVertical,
 } from 'lucide-react';
 
-const STORAGE_STATE_KEY = 'duty_station_state_v2';
-const STORAGE_CONFIG_KEY = 'duty_station_config_v2';
-const STORAGE_WORK_RECORDS_KEY = 'duty_station_work_records';
-const STORAGE_WORK_RECORD_GROUPS_KEY = 'duty_station_work_record_groups';
-const STORAGE_TRASH_KEY = 'duty_station_trash';
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+import { useFirebaseSync } from './useFirebaseSync';
 
 const DEFAULT_STATUSES: StatusConfig[] = [
   { id: 'status_pending', label: '待處理', color: '#94a3b8' },
@@ -67,6 +62,9 @@ const getNamespacedId = (shiftId: string, taskId: string) => shiftId + '::' + ta
 
 const App: React.FC = () => {
   const configLoaded = useRef(false);
+
+  // --- Firebase 即時同步 ---
+  const { data: firebaseData, isLoading, saveConfig, saveState, saveWorkRecords, saveWorkRecordGroups, saveTrash } = useFirebaseSync();
 
   // --- Configuration State ---
   const [basicTasks, setBasicTasks] = useState<TaskItem[]>(INITIAL_BASIC_TASKS);
@@ -87,49 +85,22 @@ const App: React.FC = () => {
   const [trashedItems, setTrashedItems] = useState<TrashedItem[]>([]);
   const [showTrash, setShowTrash] = useState(false);
 
-  // --- Initial Load ---
+  // --- 從 Firebase 載入資料 ---
   useEffect(() => {
-    const savedConfig = localStorage.getItem(STORAGE_CONFIG_KEY);
-    if (savedConfig) {
-      try {
-        const { basic, shifts, statuses } = JSON.parse(savedConfig);
-        if (basic && basic.length > 0) setBasicTasks(basic);
-        if (shifts && shifts.length > 0) setShiftSections(shifts);
-        if (statuses && statuses.length > 0) setStatusConfigs(statuses);
-      } catch (e) {
-        // defaults already set via useState
-      }
-    }
+    if (!firebaseData) return;
+    if (firebaseData.basicTasks?.length > 0) setBasicTasks(firebaseData.basicTasks);
+    if (firebaseData.shiftSections?.length > 0) setShiftSections(firebaseData.shiftSections);
+    if (firebaseData.statusConfigs?.length > 0) setStatusConfigs(firebaseData.statusConfigs);
+    setCheckedItems(firebaseData.checkedItems || {});
+    setHandoverItems(firebaseData.handoverItems || []);
+    setWorkRecords(firebaseData.workRecords || []);
+    setWorkRecordGroups(firebaseData.workRecordGroups || []);
+    setTrashedItems(firebaseData.trashedItems || []);
+    configLoaded.current = true;
+  }, [firebaseData]);
 
-    const savedState = localStorage.getItem(STORAGE_STATE_KEY);
-    if (savedState) {
-      try {
-        const parsed = JSON.parse(savedState);
-        setCheckedItems(parsed.checkedItems || {});
-        setHandoverItems(parsed.handoverItems || []);
-      } catch (e) { }
-    }
-
-    const savedRecords = localStorage.getItem(STORAGE_WORK_RECORDS_KEY);
-    if (savedRecords) {
-      try { setWorkRecords(JSON.parse(savedRecords)); } catch (e) { }
-    }
-
-    const savedGroups = localStorage.getItem(STORAGE_WORK_RECORD_GROUPS_KEY);
-    if (savedGroups) {
-      try { setWorkRecordGroups(JSON.parse(savedGroups)); } catch (e) { }
-    }
-
-    // Load trash and auto-clean items older than 30 days
-    const savedTrash = localStorage.getItem(STORAGE_TRASH_KEY);
-    if (savedTrash) {
-      try {
-        const parsed: TrashedItem[] = JSON.parse(savedTrash);
-        const now = Date.now();
-        setTrashedItems(parsed.filter(item => (now - item.trashedAt) < THIRTY_DAYS_MS));
-      } catch (e) { }
-    }
-
+  // --- 初始化日期與時段 ---
+  useEffect(() => {
     const updateTime = () => {
       const date = new Date();
       setCurrentDate(date.toLocaleDateString('zh-TW', {
@@ -143,35 +114,32 @@ const App: React.FC = () => {
     else if (hour >= 12 && hour < 18) setSelectedShiftId('shift_1218');
     else if (hour >= 18 && hour < 22) setSelectedShiftId('shift_1822');
     else setSelectedShiftId('shift_2206');
-
-    configLoaded.current = true;
   }, []);
 
-  // --- Persistence (only after initial load) ---
+  // --- 自動同步到 Firebase ---
   useEffect(() => {
     if (!configLoaded.current) return;
-    localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify({
-      basic: basicTasks,
-      shifts: shiftSections,
-      statuses: statusConfigs
-    }));
+    saveConfig(basicTasks, shiftSections, statusConfigs);
   }, [basicTasks, shiftSections, statusConfigs]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_STATE_KEY, JSON.stringify({ checkedItems, handoverItems }));
+    if (!configLoaded.current) return;
+    saveState(checkedItems, handoverItems);
   }, [checkedItems, handoverItems]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_WORK_RECORDS_KEY, JSON.stringify(workRecords));
+    if (!configLoaded.current) return;
+    saveWorkRecords(workRecords);
   }, [workRecords]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_WORK_RECORD_GROUPS_KEY, JSON.stringify(workRecordGroups));
+    if (!configLoaded.current) return;
+    saveWorkRecordGroups(workRecordGroups);
   }, [workRecordGroups]);
 
   useEffect(() => {
     if (!configLoaded.current) return;
-    localStorage.setItem(STORAGE_TRASH_KEY, JSON.stringify(trashedItems));
+    saveTrash(trashedItems);
   }, [trashedItems]);
 
   // --- Helper: Check if task should be visible based on day/month ---
@@ -394,6 +362,17 @@ const App: React.FC = () => {
 
 
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
+          <p className="text-gray-500 text-sm font-medium">載入資料中...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pb-10">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
@@ -568,7 +547,7 @@ const App: React.FC = () => {
                   ) : (
                     <div className="space-y-2">
                       {trashedItems.map(item => {
-                        const daysLeft = Math.max(0, Math.ceil((THIRTY_DAYS_MS - (Date.now() - item.trashedAt)) / (24 * 60 * 60 * 1000)));
+                        const daysLeft = Math.max(0, Math.ceil(((30 * 24 * 60 * 60 * 1000) - (Date.now() - item.trashedAt)) / (24 * 60 * 60 * 1000)));
                         const trashedDate = new Date(item.trashedAt).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' });
                         return (
                           <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100 group hover:bg-gray-100 transition-colors">
