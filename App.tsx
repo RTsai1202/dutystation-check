@@ -379,7 +379,7 @@ const App: React.FC = () => {
         <div className="w-full max-w-[98%] mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="">
-              <img src="/mocking_monkey.svg" alt="Mocking Monkey" className="w-14 h-14 object-contain transform hover:scale-110 transition-transform duration-200 -ml-2" />
+              <img src={`${import.meta.env.BASE_URL}mocking_monkey.svg`} alt="Mocking Monkey" className="w-14 h-14 object-contain transform hover:scale-110 transition-transform duration-200 -ml-2" />
             </div>
             <h1 className="text-xl font-bold text-gray-900">車籠埔分隊值班 Checklist</h1>
           </div>
