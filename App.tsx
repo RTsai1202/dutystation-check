@@ -958,7 +958,7 @@ const EditModeTask: React.FC<{
                   <X size={18} />
                 </button>
               </div>
-              <div className="px-5 py-4 prose prose-sm max-w-none prose-headings:text-gray-800 prose-a:text-blue-600 prose-code:bg-gray-100 prose-code:px-1 prose-code:rounded text-gray-700">
+              <div className="px-5 py-4 prose max-w-none prose-headings:text-gray-800 prose-h1:text-2xl prose-h1:font-bold prose-h2:text-xl prose-h2:font-semibold prose-h3:text-lg prose-h3:font-semibold prose-a:text-blue-600 prose-code:bg-gray-100 prose-code:px-1 prose-code:rounded text-gray-700 text-sm">
                 <Markdown>{task.notes}</Markdown>
               </div>
             </div>
@@ -1099,12 +1099,6 @@ const EditableTask: React.FC<{
               onChange={(e) => onUpdate({ notes: e.target.value })}
               placeholder={"支援 Markdown 格式，例如：\n# 標題\n- 清單項目\n**粗體** *斜體*"}
             />
-            {task.notes && (
-              <div className="p-3 bg-white border border-amber-200 rounded-lg text-sm text-gray-700 prose prose-sm max-w-none">
-                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">預覽</div>
-                <Markdown>{task.notes}</Markdown>
-              </div>
-            )}
           </div>
           <div className="flex justify-between items-center pt-2">
             <button onClick={onDelete} className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1 text-xs">

@@ -135,7 +135,7 @@ export const CheckboxItem: React.FC<Props> = ({ task, isChecked, onToggle }) => 
                 <X size={18} />
               </button>
             </div>
-            <div className="px-5 py-4 prose prose-sm max-w-none prose-headings:text-gray-800 prose-a:text-blue-600 prose-code:bg-gray-100 prose-code:px-1 prose-code:rounded text-gray-700">
+            <div className="px-5 py-4 prose max-w-none prose-headings:text-gray-800 prose-h1:text-2xl prose-h1:font-bold prose-h2:text-xl prose-h2:font-semibold prose-h3:text-lg prose-h3:font-semibold prose-a:text-blue-600 prose-code:bg-gray-100 prose-code:px-1 prose-code:rounded text-gray-700 text-sm">
               <Markdown>{task.notes}</Markdown>
             </div>
           </div>
