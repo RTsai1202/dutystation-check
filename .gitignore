@@ -1,5 +1,31 @@
-# Logs
-logs
+# 依賴套件
+node_modules/
+
+# 建置產出
+dist/
+dist-ssr/
+
+# 環境變數與隱私設定
+*.local
+.env
+.env.*
+
+# 系統暫存檔
+.DS_Store
+Thumbs.db
+
+# 編輯器設定
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Log 檔
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,18 +33,5 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# TypeScript 暫存
+*.tsbuildinfo

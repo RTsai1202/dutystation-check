@@ -1,20 +1,92 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# 🚒 車籠埔分隊值班 Checklist
 
-# Run and deploy your AI Studio app
+消防分隊數位值班交接系統，取代傳統紙本表格，提供即時同步的互動式儀表板。
 
-This contains everything you need to run your app locally.
+## ✨ 功能特色
 
-View your app in AI Studio: https://ai.studio/apps/drive/15Fy95_vr9QX209GHHh3YObX53tDLJRbe
+- **📋 分時段勾選清單** — 依 08-12、12-18、18-22、22-06 時段分類任務
+- **🔄 即時同步** — 透過 Firebase Realtime Database，多裝置即時同步資料
+- **📝 交接事項管理** — 近期注意事項與交接紀錄，含垃圾桶回收機制
+- **📂 工作紀錄模板** — 可分群組管理的工作紀錄，一鍵複製內容
+- **🎨 拖曳排序** — 支援拖放重新排列任務、交接事項、工作紀錄
+- **📱 響應式設計** — 手機、平板、電腦皆可使用
 
-## Run Locally
+## 🛠️ 技術架構
 
-**Prerequisites:**  Node.js
+| 技術 | 用途 |
+|------|------|
+| React 19 + TypeScript | 前端框架 |
+| Vite 6 | 建置工具 |
+| Firebase Realtime Database | 即時資料同步 |
+| Tailwind CSS | 樣式系統 |
+| dnd-kit | 拖放功能 |
+| Lucide React | 圖示 |
 
+## 🚀 本機開發
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+```bash
+# 安裝依賴
+npm install
+
+# 啟動開發伺服器
+npm run dev
+```
+
+開發伺服器會在 `http://localhost:3000` 啟動。
+
+## 📦 部署
+
+### GitHub Pages（自動部署）
+
+本專案使用 GitHub Actions 自動部署，推送到 `master` 分支後會自動建置並部署到 GitHub Pages。
+
+**首次設定步驟：**
+
+1. 在 GitHub 建立新 Repository，命名為 `dutystation-check`
+2. 推送程式碼：
+   ```bash
+   git remote add origin https://github.com/<你的帳號>/dutystation-check.git
+   git push -u origin master
+   ```
+3. 到 GitHub Repo → **Settings** → **Pages**
+4. Source 選擇 **GitHub Actions**
+5. 等待 Actions 執行完畢，即可訪問：
+   ```
+   https://<你的帳號>.github.io/dutystation-check/
+   ```
+
+### 手動建置
+
+```bash
+npm run build
+```
+
+建置結果會輸出到 `dist/` 目錄。
+
+## 📁 專案結構
+
+```
+dutystation-check/
+├── .github/workflows/    # GitHub Actions 部署設定
+│   └── deploy.yml
+├── components/           # React 元件
+├── services/             # API 服務
+├── public/               # 靜態資源
+├── App.tsx               # 主應用程式
+├── firebase.ts           # Firebase 初始化
+├── useFirebaseSync.ts    # Firebase 即時同步 Hook
+├── constants.ts          # 常數定義
+├── types.ts              # TypeScript 型別
+├── vite.config.ts        # Vite 設定
+└── index.html            # HTML 入口
+```
+
+## 🔒 安全性說明
+
+- Firebase 設定檔（`firebase.ts`）中的 API Key 為前端公開金鑰，僅用於識別 Firebase 專案
+- 資料安全性由 Firebase Realtime Database 的安全性規則控管
+- 環境變數（`.env.local`）已加入 `.gitignore`，不會上傳
+
+## 📄 授權
+
+MIT License
