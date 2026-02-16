@@ -1057,6 +1057,7 @@ const EditableTask: React.FC<{
   isDragging?: boolean;
 }> = ({ task, isEditMode, isChecked, onToggle, isEditing, setEditing, onDelete, onUpdate, statusConfigs, onSelectStatus, onUpdateStatuses, isHandover, dragHandleProps }) => {
   const currentStatus = statusConfigs?.find(s => s.id === task.statusId);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
 
   // If we are actively editing this specific task, show the form
   if (isEditing) {
@@ -1172,61 +1173,66 @@ const EditableTask: React.FC<{
   // Normal view for handover items
   if (isHandover) {
     return (
-      <div {...dragHandleProps} className="flex flex-col p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all group relative cursor-grab active:cursor-grabbing touch-none">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-grow space-y-1">
-            <div className="text-base font-bold text-gray-800 leading-tight whitespace-pre-wrap">{task.label}</div>
-            {task.subtext && <div className="text-xs text-gray-500 leading-relaxed whitespace-pre-wrap">{task.subtext}</div>}
+      <>
+        <div {...dragHandleProps} className="flex flex-col p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all group relative cursor-grab active:cursor-grabbing touch-none"
+          onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY }); }}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-grow space-y-1">
+              <div className="text-base font-bold text-gray-800 leading-tight whitespace-pre-wrap">{task.label}</div>
+              {task.subtext && <div className="text-xs text-gray-500 leading-relaxed whitespace-pre-wrap">{task.subtext}</div>}
+            </div>
+            <div className="flex flex-col gap-1 items-end">
+              {task.link && (() => {
+                const urls = task.link!.split('\n').map((u: string) => u.trim()).filter((u: string) => u.length > 0);
+                return (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      for (let i = urls.length - 1; i >= 0; i--) {
+                        const a = document.createElement('a');
+                        a.href = urls[i];
+                        a.target = '_blank';
+                        a.rel = 'noopener noreferrer';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                      }
+                    }}
+                    className="text-gray-400 hover:text-indigo-600 p-1 bg-gray-50 rounded-lg"
+                    title={urls.length > 1 ? `開啟 ${urls.length} 個連結` : '開啟連結'}
+                  >
+                    <ExternalLink size={16} />
+                  </button>
+                );
+              })()}
+              <button
+                onClick={setEditing}
+                className="p-1.5 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                title="快速編輯"
+              >
+                <Edit2 size={14} />
+              </button>
+            </div>
           </div>
-          <div className="flex flex-col gap-1 items-end">
-            {task.link && (() => {
-              const urls = task.link!.split('\n').map((u: string) => u.trim()).filter((u: string) => u.length > 0);
-              return (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    for (let i = urls.length - 1; i >= 0; i--) {
-                      const a = document.createElement('a');
-                      a.href = urls[i];
-                      a.target = '_blank';
-                      a.rel = 'noopener noreferrer';
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                    }
-                  }}
-                  className="text-gray-400 hover:text-indigo-600 p-1 bg-gray-50 rounded-lg"
-                  title={urls.length > 1 ? `開啟 ${urls.length} 個連結` : '開啟連結'}
-                >
-                  <ExternalLink size={16} />
-                </button>
-              );
-            })()}
-            <button
-              onClick={setEditing}
-              className="p-1.5 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-              title="快速編輯"
-            >
-              <Edit2 size={14} />
-            </button>
+          <div className="mt-4 flex items-center justify-between">
+            {statusConfigs && onSelectStatus && onUpdateStatuses ? (
+              <StatusDropdown
+                currentStatusId={task.statusId}
+                statusConfigs={statusConfigs}
+                onSelectStatus={onSelectStatus}
+                onUpdateStatuses={onUpdateStatuses}
+              />
+            ) : (
+              <span className="text-[11px] px-3 py-1.5 rounded-full font-bold text-white" style={{ backgroundColor: currentStatus?.color || '#94a3b8' }}>
+                {currentStatus?.label || '無狀態'}
+              </span>
+            )}
+            {task.link && <span className="text-[10px] text-gray-400 font-mono opacity-50">附連結</span>}
           </div>
         </div>
-        <div className="mt-4 flex items-center justify-between">
-          {statusConfigs && onSelectStatus && onUpdateStatuses ? (
-            <StatusDropdown
-              currentStatusId={task.statusId}
-              statusConfigs={statusConfigs}
-              onSelectStatus={onSelectStatus}
-              onUpdateStatuses={onUpdateStatuses}
-            />
-          ) : (
-            <span className="text-[11px] px-3 py-1.5 rounded-full font-bold text-white" style={{ backgroundColor: currentStatus?.color || '#94a3b8' }}>
-              {currentStatus?.label || '無狀態'}
-            </span>
-          )}
-          {task.link && <span className="text-[10px] text-gray-400 font-mono opacity-50">附連結</span>}
-        </div>
-      </div>
+        {ctxMenu && <ContextMenu x={ctxMenu.x} y={ctxMenu.y} onEdit={setEditing} onDelete={onDelete} onClose={() => setCtxMenu(null)} />}
+      </>
     );
   }
 

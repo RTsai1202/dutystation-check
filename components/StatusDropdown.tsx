@@ -33,17 +33,24 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
     useLayoutEffect(() => {
         if (isOpen && buttonRef.current) {
             const rect = buttonRef.current.getBoundingClientRect();
-            const scrollY = window.scrollY;
-            const scrollX = window.scrollX;
+            const dropdownHeight = 300; // 預估下拉高度
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const spaceAbove = rect.top;
 
-            // Default: align left, drop UP if too close to bottom? 
-            // For simplicity, let's just drop down first, but we can make it smarter if needed.
-            // Adjusting logic to prevent off-screen could be added later.
+            // fixed 定位用 viewport 座標，不需加 scrollY/scrollX
+            let top: number;
+            if (spaceBelow >= dropdownHeight || spaceBelow >= spaceAbove) {
+                // 向下展開
+                top = rect.bottom + 4;
+            } else {
+                // 向上展開
+                top = rect.top - dropdownHeight - 4;
+            }
 
             setPosition({
-                top: rect.bottom + scrollY + 4, // 4px gap
-                left: rect.left + scrollX,
-                width: 256 // w-64 = 256px
+                top,
+                left: rect.left,
+                width: 256
             });
         }
     }, [isOpen]);
