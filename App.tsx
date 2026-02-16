@@ -1108,6 +1108,17 @@ const EditableTask: React.FC<{
               onUpdateMonths={(months) => onUpdate({ showInMonths: months })}
             />
           )}
+          {isHandover && statusConfigs && onSelectStatus && onUpdateStatuses && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">狀態</span>
+              <StatusDropdown
+                currentStatusId={task.statusId}
+                statusConfigs={statusConfigs}
+                onSelectStatus={onSelectStatus}
+                onUpdateStatuses={onUpdateStatuses}
+              />
+            </div>
+          )}
           {/* 筆記內容編輯器 */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
