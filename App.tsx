@@ -848,6 +848,19 @@ const EditModeTask: React.FC<{
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
   const [showNotes, setShowNotes] = useState(false);
 
+  // ESC to close notes popup
+  useEffect(() => {
+    if (!showNotes) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopImmediatePropagation();
+        setShowNotes(false);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => document.removeEventListener('keydown', handleKeyDown, true);
+  }, [showNotes]);
+
   const handleCheckboxClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isChecked && onToggle) {
@@ -1058,6 +1071,21 @@ const EditableTask: React.FC<{
 }> = ({ task, isEditMode, isChecked, onToggle, isEditing, setEditing, onDelete, onUpdate, statusConfigs, onSelectStatus, onUpdateStatuses, isHandover, dragHandleProps }) => {
   const currentStatus = statusConfigs?.find(s => s.id === task.statusId);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+
+  // ESC to cancel editing, Cmd/Ctrl+Enter to save
+  useEffect(() => {
+    if (!isEditing) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setEditing();
+      } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setEditing();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isEditing, setEditing]);
 
   // If we are actively editing this specific task, show the form
   if (isEditing) {

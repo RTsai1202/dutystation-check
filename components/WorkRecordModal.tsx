@@ -327,6 +327,19 @@ const EditDialog: React.FC<{
         onSave({ ...record, title: title.trim() || '未命名', content, link: link.trim() || undefined, groupId: groupId || undefined });
     };
 
+    // Cmd/Ctrl+Enter to save
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                onSave({ ...record, title: title.trim() || '未命名', content, link: link.trim() || undefined, groupId: groupId || undefined });
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown, true);
+        return () => document.removeEventListener('keydown', handleKeyDown, true);
+    }, [title, content, link, groupId, record, onSave]);
+
     return (
         <div
             className="fixed inset-0 z-[200] flex items-center justify-center p-4"
@@ -456,6 +469,25 @@ const WorkRecordModal: React.FC<{
             return () => clearTimeout(timer);
         }
     }, [copiedId]);
+
+    // ESC to close: EditDialog > linkToast > modal
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                e.stopImmediatePropagation();
+                if (editingRecord) {
+                    setEditingRecord(null);
+                } else if (linkToast) {
+                    setLinkToast(null);
+                } else {
+                    onClose();
+                }
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown, true);
+        return () => document.removeEventListener('keydown', handleKeyDown, true);
+    }, [isOpen, editingRecord, linkToast, onClose]);
 
     const uncategorizedGroup: WorkRecordGroup = { id: '__uncategorized__', title: '未分類' };
 
