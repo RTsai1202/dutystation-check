@@ -927,7 +927,13 @@ const EditModeTask: React.FC<{
                     e.stopPropagation();
                     e.preventDefault();
                     for (let i = urls.length - 1; i >= 0; i--) {
-                      window.open(urls[i], '_blank');
+                      const a = document.createElement('a');
+                      a.href = urls[i];
+                      a.target = '_blank';
+                      a.rel = 'noopener noreferrer';
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
                     }
                     if (!isChecked && onToggle) {
                       setJustChecked(true);
@@ -1169,7 +1175,13 @@ const EditableTask: React.FC<{
                   onClick={(e) => {
                     e.stopPropagation();
                     for (let i = urls.length - 1; i >= 0; i--) {
-                      window.open(urls[i], '_blank');
+                      const a = document.createElement('a');
+                      a.href = urls[i];
+                      a.target = '_blank';
+                      a.rel = 'noopener noreferrer';
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
                     }
                   }}
                   className="text-gray-400 hover:text-indigo-600 p-1 bg-gray-50 rounded-lg"

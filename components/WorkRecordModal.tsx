@@ -792,7 +792,13 @@ const WorkRecordModal: React.FC<{
                             <button
                                 onClick={() => {
                                     for (let i = linkToast.urls.length - 1; i >= 0; i--) {
-                                        window.open(linkToast.urls[i], '_blank');
+                                        const a = document.createElement('a');
+                                        a.href = linkToast.urls[i];
+                                        a.target = '_blank';
+                                        a.rel = 'noopener noreferrer';
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        document.body.removeChild(a);
                                     }
                                     setLinkToast(null);
                                 }}

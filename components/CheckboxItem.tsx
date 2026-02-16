@@ -103,9 +103,15 @@ export const CheckboxItem: React.FC<Props> = ({ task, isChecked, onToggle }) => 
                 onClick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  // 先開後面的分頁（背景），再開第一個（前景）
+                  // 用 <a> 元素點擊開啟，避免被 popup blocker 攔截
                   for (let i = urls.length - 1; i >= 0; i--) {
-                    window.open(urls[i], '_blank');
+                    const a = document.createElement('a');
+                    a.href = urls[i];
+                    a.target = '_blank';
+                    a.rel = 'noopener noreferrer';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                   }
                   if (!isChecked) {
                     setJustChecked(true);
