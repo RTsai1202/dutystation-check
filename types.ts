@@ -28,6 +28,12 @@ export interface ShiftSection {
   tasks: TaskItem[];
 }
 
+export interface WorkRecord {
+  id: string;
+  title: string;
+  content: string;
+}
+
 export interface AppState {
   checkedItems: Record<string, boolean>;
   handoverItems: HandoverItem[];

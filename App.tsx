@@ -4,7 +4,8 @@ import { BASIC_TASKS as INITIAL_BASIC_TASKS, SHIFT_SECTIONS as INITIAL_SHIFT_SEC
 import { CheckboxItem } from './components/CheckboxItem';
 import { StatusDropdown } from './components/StatusDropdown';
 import ScheduleEditor from './components/ScheduleEditor';
-import { TaskItem, ShiftSection, HandoverItem, StatusConfig } from './types';
+import WorkRecordModal from './components/WorkRecordModal';
+import { TaskItem, ShiftSection, HandoverItem, StatusConfig, WorkRecord } from './types';
 import {
   DndContext,
   DragOverlay,
@@ -49,6 +50,7 @@ import {
 
 const STORAGE_STATE_KEY = 'duty_station_state_v2';
 const STORAGE_CONFIG_KEY = 'duty_station_config_v2';
+const STORAGE_WORK_RECORDS_KEY = 'duty_station_work_records';
 
 const DEFAULT_STATUSES: StatusConfig[] = [
   { id: 'status_pending', label: '待處理', color: '#94a3b8' },
@@ -77,6 +79,8 @@ const App: React.FC = () => {
   const [selectedShiftId, setSelectedShiftId] = useState('');
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [showStatusManager, setShowStatusManager] = useState(false);
+  const [workRecords, setWorkRecords] = useState<WorkRecord[]>([]);
+  const [showWorkRecordModal, setShowWorkRecordModal] = useState(false);
 
   // --- Initial Load ---
   useEffect(() => {
@@ -99,6 +103,11 @@ const App: React.FC = () => {
         setCheckedItems(parsed.checkedItems || {});
         setHandoverItems(parsed.handoverItems || []);
       } catch (e) { }
+    }
+
+    const savedRecords = localStorage.getItem(STORAGE_WORK_RECORDS_KEY);
+    if (savedRecords) {
+      try { setWorkRecords(JSON.parse(savedRecords)); } catch (e) { }
     }
 
     const updateTime = () => {
@@ -131,6 +140,10 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(STORAGE_STATE_KEY, JSON.stringify({ checkedItems, handoverItems }));
   }, [checkedItems, handoverItems]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_WORK_RECORDS_KEY, JSON.stringify(workRecords));
+  }, [workRecords]);
 
   // --- Helper: Check if task should be visible based on day/month ---
   const isTaskVisible = (task: TaskItem): boolean => {
@@ -251,11 +264,13 @@ const App: React.FC = () => {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveTask(null);
+    console.log('[DnD] dragEnd:', { activeId: active.id, overId: over?.id, overData: over?.data?.current });
     if (!over || active.id === over.id) return;
 
     const activeId = active.id as string;
     const overId = over.id as string;
     const sourceContainer = findContainer(activeId);
+    console.log('[DnD] source:', sourceContainer, '| overId:', overId);
     if (!sourceContainer) return;
 
     // Check if dropped on a shift tab
@@ -266,12 +281,28 @@ const App: React.FC = () => {
       const sourceTasks = getContainerTasks(sourceContainer);
       const task = sourceTasks.find(t => t.id === activeId);
       if (!task) return;
-      // Remove from source
-      setContainerTasks(sourceContainer, sourceTasks.filter(t => t.id !== activeId));
-      // Add to target shift
-      setShiftSections(prev => prev.map(s =>
-        s.id === shiftTabTarget.id ? { ...s, tasks: [...s.tasks, task] } : s
-      ));
+
+      if (sourceContainer === 'basic') {
+        // basic → shift tab
+        setBasicTasks(prev => prev.filter(t => t.id !== activeId));
+        setShiftSections(prev => prev.map(s =>
+          s.id === shiftTabTarget.id ? { ...s, tasks: [...s.tasks, task] } : s
+        ));
+      } else {
+        // shift → shift tab (must be atomic to avoid race condition)
+        setShiftSections(prev => prev.map(s => {
+          if (s.id === sourceContainer && s.id === shiftTabTarget.id) {
+            return s; // same section, no-op
+          }
+          if (s.id === sourceContainer) {
+            return { ...s, tasks: s.tasks.filter(t => t.id !== activeId) };
+          }
+          if (s.id === shiftTabTarget.id) {
+            return { ...s, tasks: [...s.tasks, task] };
+          }
+          return s;
+        }));
+      }
       return;
     }
 
@@ -395,35 +426,43 @@ const App: React.FC = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {shiftSections.map((section) => (
-            <ShiftTabDroppable
-              key={section.id}
-              section={section}
-              isActive={selectedShiftId === section.id}
-              onClick={() => setSelectedShiftId(section.id)}
-              isEditMode={isEditMode}
-            />
-          ))}
-        </div>
-
-        <div className="flex justify-end">
-          <button
-            onClick={clearShiftChecks}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-200 transition-all"
-            title="清空此時段所有勾選"
-          >
-            <RotateCcw size={13} />
-            一鍵清空該時段
-          </button>
-        </div>
-
         <DndContext
           sensors={isEditMode ? sensors : []}
           collisionDetection={pointerWithin}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {shiftSections.map((section) => (
+              <ShiftTabDroppable
+                key={section.id}
+                section={section}
+                isActive={selectedShiftId === section.id}
+                onClick={() => setSelectedShiftId(section.id)}
+                isEditMode={isEditMode}
+              />
+            ))}
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setShowWorkRecordModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-gray-200 hover:border-blue-200 transition-all"
+              title="工作記錄模板"
+            >
+              <FileText size={13} />
+              工作記錄
+            </button>
+            <button
+              onClick={clearShiftChecks}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-200 transition-all"
+              title="清空此時段所有勾選"
+            >
+              <RotateCcw size={13} />
+              一鍵清空該時段
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <DroppableSection
               id="basic"
@@ -523,6 +562,13 @@ const App: React.FC = () => {
             ) : null}
           </DragOverlay>
         </DndContext>
+
+        <WorkRecordModal
+          isOpen={showWorkRecordModal}
+          onClose={() => setShowWorkRecordModal(false)}
+          records={workRecords}
+          onUpdateRecords={setWorkRecords}
+        />
       </main>
     </div>
   );
@@ -579,10 +625,10 @@ const ShiftTabDroppable: React.FC<{
       ref={setNodeRef}
       onClick={onClick}
       className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${isOver
-          ? 'bg-blue-100 border-blue-500 text-blue-700 ring-2 ring-blue-300 scale-105'
-          : isActive
-            ? 'bg-blue-600 border-blue-600 text-white shadow-md'
-            : 'bg-white border-gray-200 text-gray-600 hover:bg-blue-50'
+        ? 'bg-blue-100 border-blue-500 text-blue-700 ring-2 ring-blue-300 scale-105'
+        : isActive
+          ? 'bg-blue-600 border-blue-600 text-white shadow-md'
+          : 'bg-white border-gray-200 text-gray-600 hover:bg-blue-50'
         }`}
     >
       <span className="text-base font-bold">{section.title}</span>
