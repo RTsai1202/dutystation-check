@@ -224,9 +224,9 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
                                                         ? 'bg-green-600 text-white'
                                                         : 'text-gray-400 hover:text-green-600 hover:bg-green-50 border border-gray-200'
                                                         }`}
-                                                    title="標記為完成狀態（選擇後項目移入垃圾桶）"
+                                                    title="此狀態代表結案，選取後項目自動歸檔至垃圾桶"
                                                 >
-                                                    <Check size={11} /> {status.isDone ? '完成態' : '設完成'}
+                                                    <Check size={11} /> {status.isDone ? '已結案' : '結案'}
                                                 </button>
                                             </div>
                                             <div className="flex items-center gap-1">
