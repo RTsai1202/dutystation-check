@@ -1,0 +1,5 @@
+{
+  "name": "DutyStation Check",
+  "description": "A digital duty checklist and handover system for emergency response teams. Replaces physical spreadsheets with an interactive, responsive dashboard.",
+  "requestFramePermissions": []
+}
