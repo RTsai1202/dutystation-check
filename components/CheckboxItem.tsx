@@ -15,7 +15,7 @@ export const CheckboxItem: React.FC<Props> = ({ task, isChecked, onToggle }) => 
     e.stopPropagation();
     if (!isChecked) {
       setJustChecked(true);
-      setTimeout(() => setJustChecked(false), 700);
+      setTimeout(() => setJustChecked(false), 1500);
     }
     onToggle();
   }, [isChecked, onToggle]);
@@ -112,43 +112,46 @@ export const CheckboxItem: React.FC<Props> = ({ task, isChecked, onToggle }) => 
           width: 10px;
           height: 10px;
           border-radius: 50%;
-          background: radial-gradient(circle, rgba(59, 130, 246, 0.4), rgba(147, 51, 234, 0.2), transparent 70%);
-          animation: rippleExpand 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+          background: radial-gradient(circle, rgba(59, 130, 246, 0.5), rgba(147, 51, 234, 0.3), transparent 70%);
+          animation: rippleExpand 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
           pointer-events: none;
           z-index: 0;
         }
 
         @keyframes rippleExpand {
           0% { transform: scale(0); opacity: 1; }
-          100% { transform: scale(40); opacity: 0; }
+          50% { opacity: 0.6; }
+          100% { transform: scale(50); opacity: 0; }
         }
 
         .checkbox-pop {
-          animation: popBounce 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+          animation: popBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
         @keyframes popBounce {
           0% { transform: scale(1); }
-          30% { transform: scale(1.4); }
-          50% { transform: scale(0.9); }
-          70% { transform: scale(1.15); }
+          20% { transform: scale(1.5); }
+          40% { transform: scale(0.85); }
+          60% { transform: scale(1.2); }
+          80% { transform: scale(0.95); }
           100% { transform: scale(1); }
         }
 
         .check-draw {
-          animation: drawCheck 0.3s ease-out 0.1s both;
+          animation: drawCheck 0.5s ease-out 0.1s both;
         }
 
         @keyframes drawCheck {
           0% { opacity: 0; transform: scale(0) rotate(-45deg); }
-          60% { opacity: 1; transform: scale(1.2) rotate(0deg); }
+          50% { opacity: 1; transform: scale(1.3) rotate(5deg); }
+          75% { transform: scale(0.95) rotate(-2deg); }
           100% { opacity: 1; transform: scale(1) rotate(0deg); }
         }
 
         .sparkle {
           position: absolute;
-          width: 6px;
-          height: 6px;
+          width: 7px;
+          height: 7px;
           border-radius: 50%;
           pointer-events: none;
           z-index: 5;
@@ -157,57 +160,63 @@ export const CheckboxItem: React.FC<Props> = ({ task, isChecked, onToggle }) => 
         .sparkle-1 {
           background: #fbbf24;
           left: 18px; top: 8px;
-          animation: sparkleShoot1 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+          animation: sparkleShoot1 1.1s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
         }
         .sparkle-2 {
           background: #a78bfa;
           left: 10px; top: 6px;
-          animation: sparkleShoot2 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.05s forwards;
+          animation: sparkleShoot2 1.0s cubic-bezier(0.22, 0.61, 0.36, 1) 0.08s forwards;
         }
         .sparkle-3 {
           background: #34d399;
           left: 22px; top: 18px;
-          animation: sparkleShoot3 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.1s forwards;
+          animation: sparkleShoot3 1.15s cubic-bezier(0.22, 0.61, 0.36, 1) 0.15s forwards;
         }
         .sparkle-4 {
           background: #f472b6;
           left: 6px; top: 20px;
-          animation: sparkleShoot4 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.08s forwards;
+          animation: sparkleShoot4 1.1s cubic-bezier(0.22, 0.61, 0.36, 1) 0.12s forwards;
         }
         .sparkle-5 {
           background: #60a5fa;
           left: 26px; top: 12px;
-          animation: sparkleShoot5 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.12s forwards;
+          animation: sparkleShoot5 1.0s cubic-bezier(0.22, 0.61, 0.36, 1) 0.2s forwards;
         }
         .sparkle-6 {
           background: #fb923c;
           left: 14px; top: 24px;
-          animation: sparkleShoot6 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.03s forwards;
+          animation: sparkleShoot6 1.05s cubic-bezier(0.22, 0.61, 0.36, 1) 0.05s forwards;
         }
 
         @keyframes sparkleShoot1 {
           0% { transform: translate(0, 0) scale(0); opacity: 1; }
-          100% { transform: translate(20px, -18px) scale(1.5); opacity: 0; }
+          60% { opacity: 0.8; }
+          100% { transform: translate(28px, -24px) scale(1.8); opacity: 0; }
         }
         @keyframes sparkleShoot2 {
           0% { transform: translate(0, 0) scale(0); opacity: 1; }
-          100% { transform: translate(-16px, -20px) scale(1.2); opacity: 0; }
+          60% { opacity: 0.8; }
+          100% { transform: translate(-22px, -28px) scale(1.5); opacity: 0; }
         }
         @keyframes sparkleShoot3 {
           0% { transform: translate(0, 0) scale(0); opacity: 1; }
-          100% { transform: translate(22px, 14px) scale(1.3); opacity: 0; }
+          60% { opacity: 0.8; }
+          100% { transform: translate(30px, 20px) scale(1.6); opacity: 0; }
         }
         @keyframes sparkleShoot4 {
           0% { transform: translate(0, 0) scale(0); opacity: 1; }
-          100% { transform: translate(-18px, 16px) scale(1.1); opacity: 0; }
+          60% { opacity: 0.8; }
+          100% { transform: translate(-24px, 22px) scale(1.4); opacity: 0; }
         }
         @keyframes sparkleShoot5 {
           0% { transform: translate(0, 0) scale(0); opacity: 1; }
-          100% { transform: translate(24px, -6px) scale(1.4); opacity: 0; }
+          60% { opacity: 0.8; }
+          100% { transform: translate(32px, -10px) scale(1.7); opacity: 0; }
         }
         @keyframes sparkleShoot6 {
           0% { transform: translate(0, 0) scale(0); opacity: 1; }
-          100% { transform: translate(-12px, 20px) scale(1); opacity: 0; }
+          60% { opacity: 0.8; }
+          100% { transform: translate(-18px, 26px) scale(1.3); opacity: 0; }
         }
       `}</style>
     </div>
