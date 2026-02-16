@@ -96,25 +96,30 @@ export const CheckboxItem: React.FC<Props> = ({ task, isChecked, onToggle }) => 
               <Info size={16} />
             </button>
           )}
-          {task.link && (
-            <a
-              href={task.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!isChecked) {
-                  setJustChecked(true);
-                  setTimeout(() => setJustChecked(false), 1500);
-                  onToggle();
-                }
-              }}
-              className="text-gray-400 hover:text-blue-600 p-1.5 rounded-md hover:bg-blue-50 transition-colors"
-              title="開啟連結"
-            >
-              <ExternalLink size={16} />
-            </a>
-          )}
+          {task.link && (() => {
+            const urls = task.link!.split('\n').map(u => u.trim()).filter(u => u.length > 0);
+            return (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  // 先開後面的分頁（背景），再開第一個（前景）
+                  for (let i = urls.length - 1; i >= 0; i--) {
+                    window.open(urls[i], '_blank');
+                  }
+                  if (!isChecked) {
+                    setJustChecked(true);
+                    setTimeout(() => setJustChecked(false), 1500);
+                    onToggle();
+                  }
+                }}
+                className="text-gray-400 hover:text-blue-600 p-1.5 rounded-md hover:bg-blue-50 transition-colors"
+                title={urls.length > 1 ? `開啟 ${urls.length} 個連結` : '開啟連結'}
+              >
+                <ExternalLink size={16} />
+              </button>
+            );
+          })()}
         </div>
       )}
 

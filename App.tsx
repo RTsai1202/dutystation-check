@@ -919,25 +919,29 @@ const EditModeTask: React.FC<{
                 <Info size={16} />
               </button>
             )}
-            {task.link && (
-              <a
-                href={task.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (!isChecked && onToggle) {
-                    setJustChecked(true);
-                    setTimeout(() => setJustChecked(false), 1500);
-                    onToggle();
-                  }
-                }}
-                className="text-gray-400 hover:text-blue-600 p-1.5 rounded-md hover:bg-blue-50 transition-colors"
-                title="開啟連結"
-              >
-                <ExternalLink size={16} />
-              </a>
-            )}
+            {task.link && (() => {
+              const urls = task.link!.split('\n').map((u: string) => u.trim()).filter((u: string) => u.length > 0);
+              return (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    for (let i = urls.length - 1; i >= 0; i--) {
+                      window.open(urls[i], '_blank');
+                    }
+                    if (!isChecked && onToggle) {
+                      setJustChecked(true);
+                      setTimeout(() => setJustChecked(false), 1500);
+                      onToggle();
+                    }
+                  }}
+                  className="text-gray-400 hover:text-blue-600 p-1.5 rounded-md hover:bg-blue-50 transition-colors"
+                  title={urls.length > 1 ? `開啟 ${urls.length} 個連結` : '開啟連結'}
+                >
+                  <ExternalLink size={16} />
+                </button>
+              );
+            })()}
           </div>
         )}
 
@@ -1072,13 +1076,14 @@ const EditableTask: React.FC<{
           />
           <div className="flex items-center gap-2">
             <div className="relative flex-grow">
-              <input
-                className="w-full p-2.5 pl-8 text-xs border border-gray-300 rounded-lg outline-none shadow-sm"
+              <textarea
+                className="w-full p-2.5 pl-8 text-xs border border-gray-300 rounded-lg outline-none shadow-sm min-h-[36px] resize-y"
                 value={task.link || ''}
                 onChange={(e) => onUpdate({ link: e.target.value })}
-                placeholder="連結 URL"
+                placeholder="連結 URL（每行一個，可填多個）"
+                rows={Math.max(1, (task.link || '').split('\n').length)}
               />
-              <ExternalLink size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <ExternalLink size={14} className="absolute left-2.5 top-3 text-gray-400" />
             </div>
             {!isHandover && (
               <button
@@ -1157,11 +1162,23 @@ const EditableTask: React.FC<{
             {task.subtext && <div className="text-xs text-gray-500 leading-relaxed whitespace-pre-wrap">{task.subtext}</div>}
           </div>
           <div className="flex flex-col gap-1 items-end">
-            {task.link && (
-              <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-indigo-600 p-1 bg-gray-50 rounded-lg">
-                <ExternalLink size={16} />
-              </a>
-            )}
+            {task.link && (() => {
+              const urls = task.link!.split('\n').map((u: string) => u.trim()).filter((u: string) => u.length > 0);
+              return (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    for (let i = urls.length - 1; i >= 0; i--) {
+                      window.open(urls[i], '_blank');
+                    }
+                  }}
+                  className="text-gray-400 hover:text-indigo-600 p-1 bg-gray-50 rounded-lg"
+                  title={urls.length > 1 ? `開啟 ${urls.length} 個連結` : '開啟連結'}
+                >
+                  <ExternalLink size={16} />
+                </button>
+              );
+            })()}
             <button
               onClick={setEditing}
               className="p-1.5 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"

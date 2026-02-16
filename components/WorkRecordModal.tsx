@@ -390,11 +390,12 @@ const EditDialog: React.FC<{
                         <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">
                             <span className="flex items-center gap-1"><LinkIcon size={12} /> 連結（選填）</span>
                         </label>
-                        <input
-                            className="w-full p-3 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm"
+                        <textarea
+                            className="w-full p-3 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm min-h-[36px] resize-y"
                             value={link}
                             onChange={(e) => setLink(e.target.value)}
-                            placeholder="https://example.com — 複製後可快速前往"
+                            placeholder="連結 URL（每行一個，可填多個）"
+                            rows={Math.max(1, link.split('\n').length)}
                         />
                     </div>
                 </div>
@@ -429,7 +430,7 @@ const WorkRecordModal: React.FC<{
     onUpdateGroups: (groups: WorkRecordGroup[]) => void;
 }> = ({ isOpen, onClose, records, onUpdateRecords, groups, onUpdateGroups }) => {
     const [copiedId, setCopiedId] = useState<string | null>(null);
-    const [linkToast, setLinkToast] = useState<{ url: string; title: string } | null>(null);
+    const [linkToast, setLinkToast] = useState<{ urls: string[]; title: string } | null>(null);
     const [editingRecord, setEditingRecord] = useState<WorkRecord | null>(null);
     const [activeRecord, setActiveRecord] = useState<WorkRecord | null>(null);
     const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
@@ -502,7 +503,10 @@ const WorkRecordModal: React.FC<{
         }
         // 若有連結，顯示前往提示
         if (record.link) {
-            setLinkToast({ url: record.link, title: record.title });
+            const urls = record.link.split('\n').map(u => u.trim()).filter(u => u.length > 0);
+            if (urls.length > 0) {
+                setLinkToast({ urls, title: record.title });
+            }
         }
     };
 
@@ -782,17 +786,19 @@ const WorkRecordModal: React.FC<{
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-100">已複製「{linkToast.title}」</p>
-                            <p className="text-xs text-gray-400 truncate">{linkToast.url}</p>
+                            <p className="text-xs text-gray-400 truncate">{linkToast.urls.length > 1 ? `${linkToast.urls.length} 個連結` : linkToast.urls[0]}</p>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                             <button
                                 onClick={() => {
-                                    window.open(linkToast.url, '_blank');
+                                    for (let i = linkToast.urls.length - 1; i >= 0; i--) {
+                                        window.open(linkToast.urls[i], '_blank');
+                                    }
                                     setLinkToast(null);
                                 }}
                                 className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-all active:scale-95 whitespace-nowrap"
                             >
-                                前往網站
+                                {linkToast.urls.length > 1 ? '開啟全部' : '前往網站'}
                             </button>
                             <button
                                 onClick={() => setLinkToast(null)}
