@@ -80,40 +80,41 @@ export const CheckboxItem: React.FC<Props> = ({ task, isChecked, onToggle }) => 
         )}
       </div>
 
-      {/* Notes info icon - only show when notes exist */}
-      {task.notes && (
-        <button
-          onClick={(e) => { e.stopPropagation(); setShowNotes(!showNotes); }}
-          className={`flex-shrink-0 p-1.5 ml-1 rounded-md transition-colors ${showNotes
-              ? 'text-amber-600 bg-amber-50'
-              : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'
-            }`}
-          title="查看筆記"
-        >
-          <Info size={16} />
-        </button>
-      )}
-
-      {/* External link icon - pushed right with margin */}
-      {task.link && (
-        <a
-          href={task.link}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => {
-            e.stopPropagation();
-            // 點擊外部連結時自動完成任務
-            if (!isChecked) {
-              setJustChecked(true);
-              setTimeout(() => setJustChecked(false), 1500);
-              onToggle();
-            }
-          }}
-          className="flex-shrink-0 text-gray-400 hover:text-blue-600 p-1.5 ml-1 rounded-md hover:bg-blue-50 transition-colors"
-          title="開啟連結"
-        >
-          <ExternalLink size={16} />
-        </a>
+      {/* Action icons - inline */}
+      {(task.notes || task.link) && (
+        <div className="flex-shrink-0 flex items-center gap-1 ml-1">
+          {task.notes && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowNotes(!showNotes); }}
+              className={`p-1.5 rounded-md transition-colors ${showNotes
+                ? 'text-amber-600 bg-amber-50'
+                : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'
+                }`}
+              title="查看筆記"
+            >
+              <Info size={16} />
+            </button>
+          )}
+          {task.link && (
+            <a
+              href={task.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isChecked) {
+                  setJustChecked(true);
+                  setTimeout(() => setJustChecked(false), 1500);
+                  onToggle();
+                }
+              }}
+              className="text-gray-400 hover:text-blue-600 p-1.5 rounded-md hover:bg-blue-50 transition-colors"
+              title="開啟連結"
+            >
+              <ExternalLink size={16} />
+            </a>
+          )}
+        </div>
       )}
 
       {/* Notes panel */}
