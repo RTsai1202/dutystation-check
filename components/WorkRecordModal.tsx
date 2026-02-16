@@ -801,7 +801,7 @@ const WorkRecordModal: React.FC<{
                             </div>
                         </div>
                         {/* 標題 */}
-                        <h3 className="text-center text-lg font-bold text-gray-800 mb-1">已複製到剪貼簿</h3>
+                        <h3 className="text-center text-lg font-bold text-gray-800 mb-1">工作項目內容已複製到剪貼簿</h3>
                         {/* 內容預覽 */}
                         <div className="bg-gray-50 rounded-xl p-3 mb-4 border border-gray-100">
                             <p className="text-sm font-semibold text-gray-700 mb-1">📋 {linkToast.title}</p>
