@@ -404,10 +404,10 @@ const App: React.FC = () => {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
         <div className="w-full max-w-[98%] mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-blue-600 p-2 rounded-lg">
-              <ClipboardCheck className="text-white w-6 h-6" />
+            <div className="bg-amber-100 p-1.5 rounded-lg border border-amber-200">
+              <img src="/mocking_monkey.svg" alt="Mocking Monkey" className="w-8 h-8 object-contain transform hover:scale-110 transition-transform duration-200" />
             </div>
-            <h1 className="text-xl font-bold text-gray-900">DutyStation Check</h1>
+            <h1 className="text-xl font-bold text-gray-900">車籠埔分隊值班 Checklist</h1>
           </div>
 
           <div className="flex items-center gap-2">
