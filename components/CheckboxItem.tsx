@@ -27,7 +27,7 @@ export const CheckboxItem: React.FC<Props> = ({ task, isChecked, onToggle }) => 
           <span className="w-1 h-4 bg-gray-500 rounded-full"></span>
           {task.label}
         </h4>
-        {task.subtext && <p className="text-xs text-gray-500 ml-3">{task.subtext}</p>}
+        {task.subtext && <p className="text-xs text-gray-500 ml-3 whitespace-pre-wrap">{task.subtext}</p>}
       </div>
     );
   }
@@ -74,7 +74,7 @@ export const CheckboxItem: React.FC<Props> = ({ task, isChecked, onToggle }) => 
           {task.label}
         </div>
         {task.subtext && (
-          <div className="text-xs text-gray-500 mt-1">{task.subtext}</div>
+          <div className="text-xs text-gray-500 mt-1 whitespace-pre-wrap">{task.subtext}</div>
         )}
       </div>
 

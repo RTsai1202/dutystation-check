@@ -833,7 +833,7 @@ const EditModeTask: React.FC<{
           <div className={`text-base leading-snug select-none whitespace-pre-wrap ${isChecked ? 'text-gray-800 font-medium' : 'text-gray-600'}`}>
             {task.label}
           </div>
-          {task.subtext && <div className="text-xs text-gray-500 mt-1">{task.subtext}</div>}
+          {task.subtext && <div className="text-xs text-gray-500 mt-1 whitespace-pre-wrap">{task.subtext}</div>}
           {(task.showOnDays?.length || task.showInMonths?.length) && (
             <div className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
               <Calendar size={10} />
@@ -1022,7 +1022,7 @@ const EditableTask: React.FC<{
         <div className="flex items-start justify-between gap-3">
           <div className="flex-grow space-y-1">
             <div className="text-base font-bold text-gray-800 leading-tight whitespace-pre-wrap">{task.label}</div>
-            {task.subtext && <div className="text-xs text-gray-500 leading-relaxed">{task.subtext}</div>}
+            {task.subtext && <div className="text-xs text-gray-500 leading-relaxed whitespace-pre-wrap">{task.subtext}</div>}
           </div>
           <div className="flex flex-col gap-1 items-end">
             {task.link && (
