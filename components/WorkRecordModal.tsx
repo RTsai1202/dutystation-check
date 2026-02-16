@@ -430,11 +430,19 @@ const WorkRecordModal: React.FC<{
     onUpdateGroups: (groups: WorkRecordGroup[]) => void;
 }> = ({ isOpen, onClose, records, onUpdateRecords, groups, onUpdateGroups }) => {
     const [copiedId, setCopiedId] = useState<string | null>(null);
-    const [linkToast, setLinkToast] = useState<{ urls: string[]; title: string } | null>(null);
+    const [linkToast, setLinkToast] = useState<{ urls: string[]; title: string; content: string } | null>(null);
     const [editingRecord, setEditingRecord] = useState<WorkRecord | null>(null);
     const [activeRecord, setActiveRecord] = useState<WorkRecord | null>(null);
     const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
     const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+
+    // 無連結時 toast 自動關閉
+    useEffect(() => {
+        if (linkToast && linkToast.urls.length === 0) {
+            const timer = setTimeout(() => setLinkToast(null), 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [linkToast]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -501,13 +509,9 @@ const WorkRecordModal: React.FC<{
             document.body.removeChild(textarea);
             setCopiedId(record.id);
         }
-        // 若有連結，顯示前往提示
-        if (record.link) {
-            const urls = record.link.split('\n').map(u => u.trim()).filter(u => u.length > 0);
-            if (urls.length > 0) {
-                setLinkToast({ urls, title: record.title });
-            }
-        }
+        // 顯示複製成功提示
+        const urls = record.link ? record.link.split('\n').map(u => u.trim()).filter(u => u.length > 0) : [];
+        setLinkToast({ urls, title: record.title, content: record.content });
     };
 
     const handleAddRecord = (groupId?: string) => {
@@ -777,40 +781,61 @@ const WorkRecordModal: React.FC<{
                     onClose={() => setEditingRecord(null)}
                 />
             )}
-            {/* Link Toast */}
+            {/* Copy Success Overlay */}
             {linkToast && (
-                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[300] animate-slide-up">
-                    <div className="bg-gray-900 text-white rounded-2xl shadow-2xl px-5 py-4 flex items-center gap-4 max-w-md">
-                        <div className="flex-shrink-0 w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                            <ExternalLink className="w-5 h-5 text-blue-400" />
+                <div
+                    className="fixed inset-0 z-[300] flex items-center justify-center"
+                    onClick={() => setLinkToast(null)}
+                >
+                    {/* 毛玻璃背景 */}
+                    <div className="absolute inset-0 bg-black/30 backdrop-blur-sm animate-fade-in" />
+                    {/* 卡片 */}
+                    <div
+                        className="relative bg-white rounded-3xl shadow-2xl p-6 mx-4 max-w-sm w-full animate-toast-in"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* 成功圖示 */}
+                        <div className="flex justify-center mb-4">
+                            <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg shadow-green-200 animate-success-pop">
+                                <Check className="w-7 h-7 text-white" strokeWidth={3} />
+                            </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-100">已複製「{linkToast.title}」</p>
-                            <p className="text-xs text-gray-400 truncate">{linkToast.urls.length > 1 ? `${linkToast.urls.length} 個連結` : linkToast.urls[0]}</p>
+                        {/* 標題 */}
+                        <h3 className="text-center text-lg font-bold text-gray-800 mb-1">已複製到剪貼簿</h3>
+                        {/* 內容預覽 */}
+                        <div className="bg-gray-50 rounded-xl p-3 mb-4 border border-gray-100">
+                            <p className="text-sm font-semibold text-gray-700 mb-1">📋 {linkToast.title}</p>
+                            <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">
+                                {linkToast.content.length > 80 ? linkToast.content.slice(0, 80) + '…' : linkToast.content}
+                            </p>
                         </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                            <button
-                                onClick={() => {
-                                    for (let i = linkToast.urls.length - 1; i >= 1; i--) {
-                                        const url = linkToast.urls[i];
+                        {/* 按鈕區 */}
+                        <div className="flex flex-col gap-2">
+                            {linkToast.urls.length > 0 && (
+                                <button
+                                    onClick={() => {
+                                        for (let i = linkToast.urls.length - 1; i >= 1; i--) {
+                                            const url = linkToast.urls[i];
+                                            setTimeout(() => {
+                                                window.open(url, '_blank');
+                                            }, (linkToast.urls.length - i) * 300);
+                                        }
                                         setTimeout(() => {
-                                            window.open(url, '_blank');
-                                        }, (linkToast.urls.length - i) * 300);
-                                    }
-                                    setTimeout(() => {
-                                        window.open(linkToast.urls[0], '_blank');
-                                    }, linkToast.urls.length * 300);
-                                    setLinkToast(null);
-                                }}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-all active:scale-95 whitespace-nowrap"
-                            >
-                                {linkToast.urls.length > 1 ? '開啟全部' : '前往網站'}
-                            </button>
+                                            window.open(linkToast.urls[0], '_blank');
+                                        }, linkToast.urls.length * 300);
+                                        setLinkToast(null);
+                                    }}
+                                    className="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-sm font-bold rounded-xl transition-all active:scale-[0.98] shadow-md shadow-blue-200 flex items-center justify-center gap-2"
+                                >
+                                    <ExternalLink size={16} />
+                                    {linkToast.urls.length > 1 ? `開啟全部 ${linkToast.urls.length} 個相關網站` : '開啟相關網站'}
+                                </button>
+                            )}
                             <button
                                 onClick={() => setLinkToast(null)}
-                                className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                                className="w-full py-2.5 text-sm font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition-colors"
                             >
-                                <X size={16} />
+                                關閉
                             </button>
                         </div>
                     </div>
@@ -826,12 +851,27 @@ const WorkRecordModal: React.FC<{
                 .animate-bounce-in {
                     animation: bounce-in 0.3s ease-out;
                 }
-                @keyframes slide-up {
-                    0% { transform: translate(-50%, 20px); opacity: 0; }
-                    100% { transform: translate(-50%, 0); opacity: 1; }
+                @keyframes fade-in {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
                 }
-                .animate-slide-up {
-                    animation: slide-up 0.3s ease-out;
+                .animate-fade-in {
+                    animation: fade-in 0.2s ease-out;
+                }
+                @keyframes toast-in {
+                    0% { transform: scale(0.85) translateY(20px); opacity: 0; }
+                    100% { transform: scale(1) translateY(0); opacity: 1; }
+                }
+                .animate-toast-in {
+                    animation: toast-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+                }
+                @keyframes success-pop {
+                    0% { transform: scale(0); }
+                    50% { transform: scale(1.2); }
+                    100% { transform: scale(1); }
+                }
+                .animate-success-pop {
+                    animation: success-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
                 }
             `}</style>
         </div>
