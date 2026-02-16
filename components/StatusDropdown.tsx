@@ -226,7 +226,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
                                                         }`}
                                                     title="此狀態代表結案，選取後項目自動歸檔至垃圾桶"
                                                 >
-                                                    <Check size={11} /> {status.isDone ? '已結案' : '結案'}
+                                                    <Check size={11} /> {status.isDone ? '歸檔 ✓' : '歸檔'}
                                                 </button>
                                             </div>
                                             <div className="flex items-center gap-1">
