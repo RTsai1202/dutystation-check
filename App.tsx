@@ -926,12 +926,15 @@ const EditModeTask: React.FC<{
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    window.open(urls[0], '_blank');
-                    for (let i = 1; i < urls.length; i++) {
+                    for (let i = urls.length - 1; i >= 1; i--) {
+                      const url = urls[i];
                       setTimeout(() => {
-                        window.open(urls[i], '_blank');
-                      }, i * 300);
+                        window.open(url, '_blank');
+                      }, (urls.length - i) * 300);
                     }
+                    setTimeout(() => {
+                      window.open(urls[0], '_blank');
+                    }, urls.length * 300);
                     if (!isChecked && onToggle) {
                       setJustChecked(true);
                       setTimeout(() => setJustChecked(false), 1500);
@@ -1186,12 +1189,15 @@ const EditableTask: React.FC<{
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      window.open(urls[0], '_blank');
-                      for (let i = 1; i < urls.length; i++) {
+                      for (let i = urls.length - 1; i >= 1; i--) {
+                        const url = urls[i];
                         setTimeout(() => {
-                          window.open(urls[i], '_blank');
-                        }, i * 300);
+                          window.open(url, '_blank');
+                        }, (urls.length - i) * 300);
                       }
+                      setTimeout(() => {
+                        window.open(urls[0], '_blank');
+                      }, urls.length * 300);
                     }}
                     className="text-gray-400 hover:text-indigo-600 p-1 bg-gray-50 rounded-lg"
                     title={urls.length > 1 ? `開啟 ${urls.length} 個連結` : '開啟連結'}

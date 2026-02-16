@@ -103,13 +103,17 @@ export const CheckboxItem: React.FC<Props> = ({ task, isChecked, onToggle }) => 
                 onClick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  // 第一個直接開（不會被擋），其餘延遲開啟
-                  window.open(urls[0], '_blank');
-                  for (let i = 1; i < urls.length; i++) {
+                  // 先延遲開後面的 URL（背景），最後開第一個（前景）
+                  for (let i = urls.length - 1; i >= 1; i--) {
+                    const url = urls[i];
                     setTimeout(() => {
-                      window.open(urls[i], '_blank');
-                    }, i * 300);
+                      window.open(url, '_blank');
+                    }, (urls.length - i) * 300);
                   }
+                  // 最後開第一個，確保它在前景
+                  setTimeout(() => {
+                    window.open(urls[0], '_blank');
+                  }, urls.length * 300);
                   if (!isChecked) {
                     setJustChecked(true);
                     setTimeout(() => setJustChecked(false), 1500);
