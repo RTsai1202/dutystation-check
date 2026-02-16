@@ -47,9 +47,14 @@ import {
   ChevronDown,
   ChevronUp,
   GripVertical,
+  Lock,
 } from 'lucide-react';
 
+
 import { useFirebaseSync } from './useFirebaseSync';
+
+const ACCESS_PASSWORD = '22792947';
+const AUTH_STORAGE_KEY = 'dutystation_auth';
 
 const DEFAULT_STATUSES: StatusConfig[] = [
   { id: 'status_pending', label: '待處理', color: '#94a3b8' },
@@ -60,7 +65,77 @@ const DEFAULT_STATUSES: StatusConfig[] = [
 
 const getNamespacedId = (shiftId: string, taskId: string) => shiftId + '::' + taskId;
 
+// --- 密碼驗證閘門 ---
+const PasswordGate: React.FC<{ onAuthenticated: () => void }> = ({ onAuthenticated }) => {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(false);
+  const [shaking, setShaking] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === ACCESS_PASSWORD) {
+      localStorage.setItem(AUTH_STORAGE_KEY, 'true');
+      onAuthenticated();
+    } else {
+      setError(true);
+      setShaking(true);
+      setTimeout(() => setShaking(false), 500);
+      setPassword('');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
+      <div className={`bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-8 w-full max-w-sm space-y-6 ${shaking ? 'animate-shake' : ''}`}>
+        <div className="text-center space-y-3">
+          <div className="w-16 h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center mx-auto">
+            <Lock className="w-8 h-8 text-blue-300" />
+          </div>
+          <h1 className="text-xl font-bold text-white">車籠埔分隊值班系統</h1>
+          <p className="text-sm text-blue-200/70">請輸入存取密碼</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(false); }}
+              placeholder="請輸入密碼"
+              autoFocus
+              className={`w-full px-4 py-3 bg-white/10 border-2 rounded-xl text-white placeholder-blue-300/50 outline-none text-center text-lg tracking-widest transition-colors ${error ? 'border-red-400 bg-red-500/10' : 'border-white/20 focus:border-blue-400'
+                }`}
+            />
+            {error && (
+              <p className="text-red-400 text-xs text-center mt-2 font-medium">密碼錯誤，請重新輸入</p>
+            )}
+          </div>
+          <button
+            type="submit"
+            className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 transition-all active:scale-95"
+          >
+            進入系統
+          </button>
+        </form>
+      </div>
+
+      <style>{`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          20%, 60% { transform: translateX(-8px); }
+          40%, 80% { transform: translateX(8px); }
+        }
+        .animate-shake { animation: shake 0.4s ease-in-out; }
+      `}</style>
+    </div>
+  );
+};
+
 const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem(AUTH_STORAGE_KEY) === 'true';
+  });
+
   const configLoaded = useRef(false);
 
   // --- Firebase 即時同步 ---
@@ -361,6 +436,11 @@ const App: React.FC = () => {
   };
 
 
+
+  // --- 密碼驗證 ---
+  if (!isAuthenticated) {
+    return <PasswordGate onAuthenticated={() => setIsAuthenticated(true)} />;
+  }
 
   if (isLoading) {
     return (
