@@ -321,7 +321,7 @@ const App: React.FC = () => {
 
   // --- DnD Setup ---
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
   const [activeTask, setActiveTask] = useState<TaskItem | null>(null);
