@@ -941,13 +941,29 @@ const EditModeTask: React.FC<{
           </div>
         )}
 
-        {/* Notes panel */}
-        {showNotes && task.notes && (
-          <div className="w-full mt-2 -mb-1">
-            <div className="ml-9 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-gray-700 prose prose-sm max-w-none">
-              <Markdown>{task.notes}</Markdown>
+        {/* Notes popup modal */}
+        {showNotes && task.notes && ReactDOM.createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={() => setShowNotes(false)}>
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <div
+              className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-y-auto animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-3 flex items-center justify-between rounded-t-2xl">
+                <div className="flex items-center gap-2">
+                  <Info size={16} className="text-amber-500" />
+                  <span className="font-bold text-gray-800 text-sm">{task.label}</span>
+                </div>
+                <button onClick={() => setShowNotes(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="px-5 py-4 prose prose-sm max-w-none prose-headings:text-gray-800 prose-a:text-blue-600 prose-code:bg-gray-100 prose-code:px-1 prose-code:rounded text-gray-700">
+                <Markdown>{task.notes}</Markdown>
+              </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
       {ctxMenu && <ContextMenu x={ctxMenu.x} y={ctxMenu.y} onEdit={onEdit} onDelete={onDelete} onClose={() => setCtxMenu(null)} />}
