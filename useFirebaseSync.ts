@@ -96,29 +96,41 @@ export function useFirebaseSync(): UseFirebaseSyncResult {
         lastWriteTime.current = Date.now();
     };
 
+    // Firebase 不接受 undefined 值，需要轉成 null
+    const sanitize = (obj: any): any => {
+        if (obj === undefined) return null;
+        if (obj === null || typeof obj !== 'object') return obj;
+        if (Array.isArray(obj)) return obj.map(sanitize);
+        const result: any = {};
+        for (const [key, value] of Object.entries(obj)) {
+            result[key] = sanitize(value);
+        }
+        return result;
+    };
+
     const saveConfig = useCallback((basic: TaskItem[], shifts: ShiftSection[], statuses: StatusConfig[]) => {
         markWrite();
-        set(ref(database, `${DB_PATH}/config`), { basic, shifts, statuses });
+        set(ref(database, `${DB_PATH}/config`), sanitize({ basic, shifts, statuses }));
     }, []);
 
     const saveState = useCallback((checked: Record<string, boolean>, handover: HandoverItem[]) => {
         markWrite();
-        set(ref(database, `${DB_PATH}/state`), { checkedItems: checked, handoverItems: handover });
+        set(ref(database, `${DB_PATH}/state`), sanitize({ checkedItems: checked, handoverItems: handover }));
     }, []);
 
     const saveWorkRecords = useCallback((records: WorkRecord[]) => {
         markWrite();
-        set(ref(database, `${DB_PATH}/workRecords`), records);
+        set(ref(database, `${DB_PATH}/workRecords`), sanitize(records));
     }, []);
 
     const saveWorkRecordGroups = useCallback((groups: WorkRecordGroup[]) => {
         markWrite();
-        set(ref(database, `${DB_PATH}/workRecordGroups`), groups);
+        set(ref(database, `${DB_PATH}/workRecordGroups`), sanitize(groups));
     }, []);
 
     const saveTrash = useCallback((items: TrashedItem[]) => {
         markWrite();
-        set(ref(database, `${DB_PATH}/trash`), items);
+        set(ref(database, `${DB_PATH}/trash`), sanitize(items));
     }, []);
 
     return {
