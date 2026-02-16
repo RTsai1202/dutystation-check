@@ -1003,7 +1003,8 @@ const EditModeTask: React.FC<{
 };
 
 const SortableTask: React.FC<any> = (props) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.task.id, disabled: !props.isEditMode });
+  const isCurrentlyEditing = props.isEditing;
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.task.id, disabled: !props.isEditMode || isCurrentlyEditing });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -1012,7 +1013,7 @@ const SortableTask: React.FC<any> = (props) => {
     zIndex: isDragging ? 50 : 'auto' as any,
   };
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style} {...attributes} {...(isCurrentlyEditing ? {} : listeners)}>
       <EditableTask {...props} isDragging={isDragging} />
     </div>
   );
