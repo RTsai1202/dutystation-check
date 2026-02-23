@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { TaskItem } from '../types';
 import { Check, ExternalLink, Info, X } from 'lucide-react';
-import Markdown from 'react-markdown';
+import { RichTextDisplay } from './RichTextDisplay';
 
 interface Props {
   task: TaskItem;
@@ -77,7 +77,7 @@ export const CheckboxItem: React.FC<Props> = ({ task, isChecked, onToggle }) => 
           {task.label}
         </div>
         {task.subtext && (
-          <div className="text-xs text-gray-500 mt-1 whitespace-pre-wrap">{task.subtext}</div>
+          <RichTextDisplay html={task.subtext} className="text-xs text-gray-500 mt-1" />
         )}
       </div>
 
@@ -148,17 +148,7 @@ export const CheckboxItem: React.FC<Props> = ({ task, isChecked, onToggle }) => 
               </button>
             </div>
             <div className="px-5 py-4 text-gray-700 text-sm leading-relaxed">
-              <Markdown components={{
-                h1: ({ children }) => <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.8em 0 0.4em', color: '#1f2937' }}>{children}</h1>,
-                h2: ({ children }) => <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: '0.7em 0 0.3em', color: '#1f2937' }}>{children}</h2>,
-                h3: ({ children }) => <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: '0.6em 0 0.2em', color: '#374151' }}>{children}</h3>,
-                a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>{children}</a>,
-                code: ({ children }) => <code style={{ background: '#f3f4f6', padding: '1px 4px', borderRadius: 4, fontSize: '0.85em' }}>{children}</code>,
-                ul: ({ children }) => <ul style={{ paddingLeft: '1.2em', margin: '0.4em 0' }}>{children}</ul>,
-                ol: ({ children }) => <ol style={{ paddingLeft: '1.2em', margin: '0.4em 0' }}>{children}</ol>,
-                li: ({ children }) => <li style={{ margin: '0.2em 0' }}>{children}</li>,
-                p: ({ children }) => <p style={{ margin: '0.4em 0' }}>{children}</p>,
-              }}>{task.notes}</Markdown>
+              <RichTextDisplay html={task.notes} className="prose prose-sm" />
             </div>
           </div>
         </div>,
