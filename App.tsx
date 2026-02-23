@@ -49,6 +49,7 @@ import {
   Lock,
   Info,
   Copy,
+  Search,
 } from 'lucide-react';
 import Markdown from 'react-markdown';
 
@@ -1138,6 +1139,7 @@ const EditableTask: React.FC<{
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
   const [copyToast, setCopyToast] = useState<{ title: string; content: string; urls: string[] } | null>(null);
   const [showRecordPicker, setShowRecordPicker] = useState<{ urls: string[] } | false>(false);
+  const [recordSearchQuery, setRecordSearchQuery] = useState('');
 
   const linkedRecords = useMemo(() => {
     if (!task.linkedRecordIds?.length || !workRecords?.length) return [];
@@ -1170,78 +1172,78 @@ const EditableTask: React.FC<{
 
   const recordPickerPortal = showRecordPicker && linkedRecords.length > 1
     ? ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={() => setShowRecordPicker(false)}>
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Copy size={16} className="text-teal-500" />
-                <span className="font-bold text-gray-800 text-sm">選擇工作紀錄</span>
-              </div>
-              <button onClick={() => setShowRecordPicker(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors">
-                <X size={18} />
-              </button>
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={() => setShowRecordPicker(false)}>
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+        <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+          <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Copy size={16} className="text-teal-500" />
+              <span className="font-bold text-gray-800 text-sm">選擇工作紀錄</span>
             </div>
-            <div className="p-3 space-y-1 max-h-[60vh] overflow-y-auto">
-              {linkedRecords.map(record => (
-                <button
-                  key={record.id}
-                  onClick={() => handleCopyRecord(record, showRecordPicker.urls)}
-                  className="w-full text-left px-4 py-3 rounded-xl hover:bg-teal-50 transition-colors group"
-                >
-                  <div className="font-medium text-sm text-gray-800 group-hover:text-teal-700">{record.title}</div>
-                  <div className="text-xs text-gray-400 mt-1 truncate">{record.content.slice(0, 60)}{record.content.length > 60 ? '...' : ''}</div>
-                </button>
-              ))}
-            </div>
+            <button onClick={() => setShowRecordPicker(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors">
+              <X size={18} />
+            </button>
           </div>
-        </div>,
-        document.body
-      )
+          <div className="p-3 space-y-1 max-h-[60vh] overflow-y-auto">
+            {linkedRecords.map(record => (
+              <button
+                key={record.id}
+                onClick={() => handleCopyRecord(record, showRecordPicker.urls)}
+                className="w-full text-left px-4 py-3 rounded-xl hover:bg-teal-50 transition-colors group"
+              >
+                <div className="font-medium text-sm text-gray-800 group-hover:text-teal-700">{record.title}</div>
+                <div className="text-xs text-gray-400 mt-1 truncate">{record.content.slice(0, 60)}{record.content.length > 60 ? '...' : ''}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>,
+      document.body
+    )
     : null;
 
   const copyToastPortal = copyToast
     ? ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4" onClick={() => setCopyToast(null)}>
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" />
-          <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 pt-5 pb-3 flex flex-col items-center text-center">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center animate-copy-success-pop mb-3">
-                <Check size={24} className="text-green-600" />
-              </div>
-              <div className="text-base font-bold text-gray-800">已複製到剪貼簿</div>
-              <div className="text-sm text-gray-600 mt-1 font-medium">{copyToast.title}</div>
-              <div className="text-xs text-gray-400 mt-1 line-clamp-2 max-w-[280px]">{copyToast.content.slice(0, 100)}{copyToast.content.length > 100 ? '...' : ''}</div>
+      <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4" onClick={() => setCopyToast(null)}>
+        <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" />
+        <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+          <div className="px-5 pt-5 pb-3 flex flex-col items-center text-center">
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center animate-copy-success-pop mb-3">
+              <Check size={24} className="text-green-600" />
             </div>
-            <div className="px-5 pb-4 pt-2 flex flex-col gap-2">
-              {copyToast.urls.length > 0 && (
-                <button
-                  onClick={() => {
-                    const urls = copyToast.urls;
-                    for (let i = urls.length - 1; i >= 1; i--) {
-                      const url = urls[i];
-                      setTimeout(() => { window.open(url, '_blank'); }, (urls.length - i) * 300);
-                    }
-                    setTimeout(() => { window.open(urls[0], '_blank'); }, urls.length * 300);
-                    setCopyToast(null);
-                  }}
-                  className="w-full py-2.5 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
-                >
-                  <ExternalLink size={16} />
-                  {copyToast.urls.length > 1 ? `開啟 ${copyToast.urls.length} 個相關網站` : '開啟相關網站'}
-                </button>
-              )}
-              <button
-                onClick={() => setCopyToast(null)}
-                className="w-full py-2 text-gray-500 hover:text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors text-sm"
-              >
-                關閉
-              </button>
-            </div>
+            <div className="text-base font-bold text-gray-800">已複製到剪貼簿</div>
+            <div className="text-sm text-gray-600 mt-1 font-medium">{copyToast.title}</div>
+            <div className="text-xs text-gray-400 mt-1 line-clamp-2 max-w-[280px]">{copyToast.content.slice(0, 100)}{copyToast.content.length > 100 ? '...' : ''}</div>
           </div>
-        </div>,
-        document.body
-      )
+          <div className="px-5 pb-4 pt-2 flex flex-col gap-2">
+            {copyToast.urls.length > 0 && (
+              <button
+                onClick={() => {
+                  const urls = copyToast.urls;
+                  for (let i = urls.length - 1; i >= 1; i--) {
+                    const url = urls[i];
+                    setTimeout(() => { window.open(url, '_blank'); }, (urls.length - i) * 300);
+                  }
+                  setTimeout(() => { window.open(urls[0], '_blank'); }, urls.length * 300);
+                  setCopyToast(null);
+                }}
+                className="w-full py-2.5 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+              >
+                <ExternalLink size={16} />
+                {copyToast.urls.length > 1 ? `開啟 ${copyToast.urls.length} 個相關網站` : '開啟相關網站'}
+              </button>
+            )}
+            <button
+              onClick={() => setCopyToast(null)}
+              className="w-full py-2 text-gray-500 hover:text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors text-sm"
+            >
+              關閉
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )
     : null;
 
   // ESC to cancel editing, Cmd/Ctrl+Enter to save
@@ -1333,36 +1335,65 @@ const EditableTask: React.FC<{
               placeholder={"支援 Markdown 格式，例如：\n# 標題\n- 清單項目\n**粗體** *斜體*"}
             />
           </div>
-          {workRecords && workRecords.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Copy size={14} className="text-teal-500" />
-                <span className="text-[10px] font-bold text-teal-600 uppercase tracking-wider">連結工作紀錄</span>
+          {workRecords && workRecords.length > 0 && (() => {
+            const query = recordSearchQuery.trim().toLowerCase();
+            const filteredRecords = query
+              ? workRecords.filter(r => r.title.toLowerCase().includes(query))
+              : workRecords;
+            return (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Copy size={14} className="text-teal-500" />
+                  <span className="text-[10px] font-bold text-teal-600 uppercase tracking-wider">連結工作紀錄</span>
+                </div>
+                {/* Search input for records */}
+                <div className="relative">
+                  <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={recordSearchQuery}
+                    onChange={(e) => setRecordSearchQuery(e.target.value)}
+                    placeholder="搜尋工作記錄名稱…"
+                    className="w-full pl-8 pr-7 py-1.5 text-xs border border-teal-200 rounded-lg bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent outline-none shadow-sm transition-all placeholder:text-gray-400"
+                  />
+                  {recordSearchQuery && (
+                    <button
+                      onClick={() => setRecordSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600 rounded transition-colors"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-[160px] overflow-y-auto border border-teal-200 rounded-lg bg-teal-50/30 p-2 space-y-1">
+                  {filteredRecords.length === 0 ? (
+                    <div className="text-center py-3 text-xs text-gray-400 italic">找不到符合的記錄</div>
+                  ) : (
+                    filteredRecords.map(record => {
+                      const isLinked = task.linkedRecordIds?.includes(record.id) || false;
+                      return (
+                        <label key={record.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${isLinked ? 'bg-teal-100' : 'hover:bg-teal-50'}`}>
+                          <input
+                            type="checkbox"
+                            checked={isLinked}
+                            onChange={() => {
+                              const current = task.linkedRecordIds || [];
+                              const next = isLinked
+                                ? current.filter((id: string) => id !== record.id)
+                                : [...current, record.id];
+                              onUpdate({ linkedRecordIds: next.length > 0 ? next : undefined });
+                            }}
+                            className="accent-teal-600 w-4 h-4"
+                          />
+                          <span className="text-xs text-gray-700 truncate">{record.title}</span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
               </div>
-              <div className="max-h-[160px] overflow-y-auto border border-teal-200 rounded-lg bg-teal-50/30 p-2 space-y-1">
-                {workRecords.map(record => {
-                  const isLinked = task.linkedRecordIds?.includes(record.id) || false;
-                  return (
-                    <label key={record.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${isLinked ? 'bg-teal-100' : 'hover:bg-teal-50'}`}>
-                      <input
-                        type="checkbox"
-                        checked={isLinked}
-                        onChange={() => {
-                          const current = task.linkedRecordIds || [];
-                          const next = isLinked
-                            ? current.filter((id: string) => id !== record.id)
-                            : [...current, record.id];
-                          onUpdate({ linkedRecordIds: next.length > 0 ? next : undefined });
-                        }}
-                        className="accent-teal-600 w-4 h-4"
-                      />
-                      <span className="text-xs text-gray-700 truncate">{record.title}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+            );
+          })()}
           <div className="flex justify-between items-center pt-2">
             <button onClick={onDelete} className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1 text-xs">
               <Trash2 size={16} /> 刪除

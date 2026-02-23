@@ -35,6 +35,7 @@ import {
     FileText,
     Link as LinkIcon,
     ExternalLink,
+    Search,
 } from 'lucide-react';
 import { WorkRecord, WorkRecordGroup } from '../types';
 
@@ -448,6 +449,7 @@ const WorkRecordModal: React.FC<{
     const [activeRecord, setActiveRecord] = useState<WorkRecord | null>(null);
     const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
     const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+    const [searchQuery, setSearchQuery] = useState('');
 
     // 無連結時 toast 自動關閉
     useEffect(() => {
@@ -495,19 +497,27 @@ const WorkRecordModal: React.FC<{
         return [...groups, uncategorizedGroup];
     }, [groups]);
 
-    // Group records by groupId
+    // Group records by groupId, filtered by search query
     const recordsByGroup = useMemo(() => {
         const map: Record<string, WorkRecord[]> = {};
         for (const g of orderedGroups) {
             map[g.id] = [];
         }
+        const query = searchQuery.trim().toLowerCase();
         for (const r of records) {
+            // Filter by search query (match title)
+            if (query && !r.title.toLowerCase().includes(query)) continue;
             const gid = r.groupId && groups.find(g => g.id === r.groupId) ? r.groupId : '__uncategorized__';
             if (!map[gid]) map[gid] = [];
             map[gid].push(r);
         }
         return map;
-    }, [records, groups, orderedGroups]);
+    }, [records, groups, orderedGroups, searchQuery]);
+
+    // Total filtered record count (for no-results check)
+    const filteredRecordCount = useMemo(() => {
+        return Object.values(recordsByGroup).reduce((sum, arr) => sum + arr.length, 0);
+    }, [recordsByGroup]);
 
     // All sortable IDs: section headers + record items
     const allSortableIds = useMemo(() => {
@@ -519,6 +529,11 @@ const WorkRecordModal: React.FC<{
         }
         return ids;
     }, [orderedGroups, recordsByGroup]);
+
+    // Reset search when modal closes
+    useEffect(() => {
+        if (!isOpen) setSearchQuery('');
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -708,6 +723,30 @@ const WorkRecordModal: React.FC<{
                     </div>
                 </div>
 
+                {/* Search Bar */}
+                {(records.length > 0 || groups.length > 0) && (
+                    <div className="px-6 pt-3 pb-0 flex-shrink-0">
+                        <div className="relative">
+                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="搜尋工作記錄名稱…"
+                                className="w-full pl-9 pr-9 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm transition-all placeholder:text-gray-400"
+                            />
+                            {searchQuery && (
+                                <button
+                                    onClick={() => setSearchQuery('')}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                                >
+                                    <X size={14} />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* Content */}
                 <div className="flex-grow overflow-y-auto p-6">
                     {records.length === 0 && groups.length === 0 ? (
@@ -727,6 +766,20 @@ const WorkRecordModal: React.FC<{
                                 新增記錄
                             </button>
                         </div>
+                    ) : searchQuery && filteredRecordCount === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-3 py-12">
+                            <Search size={40} strokeWidth={1.5} className="text-gray-300" />
+                            <div className="text-center">
+                                <p className="text-base font-medium text-gray-500">找不到符合的記錄</p>
+                                <p className="text-sm mt-1">嘗試其他關鍵字搜尋</p>
+                            </div>
+                            <button
+                                onClick={() => setSearchQuery('')}
+                                className="mt-2 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
+                            >
+                                清除搜尋
+                            </button>
+                        </div>
                     ) : (
                         <DndContext
                             sensors={sensors}
@@ -744,8 +797,8 @@ const WorkRecordModal: React.FC<{
                                         const isUncategorized = group.id === '__uncategorized__';
                                         const isCollapsed = !!collapsedGroups[group.id];
 
-                                        // Hide empty uncategorized when there are user groups and records
-                                        if (isUncategorized && groupRecords.length === 0 && groups.length > 0) {
+                                        // Hide empty groups (uncategorized or when searching)
+                                        if (groupRecords.length === 0 && (isUncategorized && groups.length > 0 || searchQuery.trim())) {
                                             return null;
                                         }
 
