@@ -444,7 +444,17 @@ const App: React.FC = () => {
   const handleDutyLogSubmit = async () => {
     if (!dutyLogForm) return;
 
-    // 必須在 await 之前同步開新分頁，否則瀏覽器會判定不是使用者觸發而擋下 popup
+    const nextConfig: DutyLogConfig = {
+      templates: dutyLogForm.templates,
+      equipmentCounts: normalizeEquipmentCounts(dutyLogForm.equipmentCounts),
+    };
+    const nextForm = { ...dutyLogForm, equipmentCounts: nextConfig.equipmentCounts };
+    const text = buildDutyLogText(nextForm);
+
+    // 同步在使用者 gesture 內：先觸發剪貼簿寫入（不 await，免得 window.open 被當成非 gesture 而被擋）
+    const copyPromise = copyText(text);
+
+    // 同步開啟分頁（必須在 await 之前，且也要在 window.open 切焦點之前完成 clipboard 呼叫）
     const linksToOpen = openDutyLogLinksAfterSubmit;
     linksToOpen.forEach(url => {
       window.open(url, '_blank', 'noopener');
@@ -455,13 +465,7 @@ const App: React.FC = () => {
     const dutyLogCheckId = getNamespacedId(selectedShiftId, DUTY_LOG_TASK_ID);
     setCheckedItems(prev => ({ ...prev, [dutyLogCheckId]: true }));
 
-    const nextConfig: DutyLogConfig = {
-      templates: dutyLogForm.templates,
-      equipmentCounts: normalizeEquipmentCounts(dutyLogForm.equipmentCounts),
-    };
-    const nextForm = { ...dutyLogForm, equipmentCounts: nextConfig.equipmentCounts };
-
-    await copyText(buildDutyLogText(nextForm));
+    await copyPromise;
     setDutyLogConfig(nextConfig);
     setDutyLogForm(null);
     setDutyLogCopyMessage('已複製值班工作紀錄');
