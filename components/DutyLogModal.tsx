@@ -23,8 +23,7 @@ export const EQUIPMENT_FIELDS: Array<{ key: keyof DutyLogEquipmentCounts; label:
   { key: 'portableRadio', label: '手提台' },
   { key: 'vehicle', label: '車輛' },
   { key: 'motorcycle', label: '機車' },
-  { key: 'gps', label: 'GPS' },
-  { key: 'camera', label: '相機' },
+  { key: 'satellitePhone', label: '衛星電話' },
   { key: 'tablet', label: '平板' },
 ];
 
@@ -40,8 +39,7 @@ export const normalizeEquipmentCounts = (counts?: Partial<DutyLogEquipmentCounts
   portableRadio: normalizeCount(counts?.portableRadio),
   vehicle: normalizeCount(counts?.vehicle),
   motorcycle: normalizeCount(counts?.motorcycle),
-  gps: normalizeCount(counts?.gps),
-  camera: normalizeCount(counts?.camera),
+  satellitePhone: normalizeCount(counts?.satellitePhone),
   tablet: normalizeCount(counts?.tablet),
 });
 
@@ -52,7 +50,7 @@ export const buildDutyLogText = (form: DutyLogFormState) => {
     form.templates.line1,
     form.templates.line2,
     `三、火警 ${form.fireCount} 件、救護 ${form.emsCount} 件。`,
-    `四、值班台無線電及設備清點：車裝台 ${form.equipmentCounts.vehicleRadio} 台、固定台 ${form.equipmentCounts.fixedRadio} 台、手提台 ${form.equipmentCounts.portableRadio} 台、車輛 ${form.equipmentCounts.vehicle} 台、機車 ${form.equipmentCounts.motorcycle} 台、GPS ${form.equipmentCounts.gps} 台、相機 ${form.equipmentCounts.camera} 台、平板 ${form.equipmentCounts.tablet} 台`,
+    `四、值班台無線電及設備清點：車裝台 ${form.equipmentCounts.vehicleRadio} 台、固定台 ${form.equipmentCounts.fixedRadio} 台、手提台 ${form.equipmentCounts.portableRadio} 台、車輛 ${form.equipmentCounts.vehicle} 台、機車 ${form.equipmentCounts.motorcycle} 台、衛星電話 ${form.equipmentCounts.satellitePhone} 台、平板 ${form.equipmentCounts.tablet} 台`,
   ].map(line => line.trim()).filter(Boolean);
 
   if (form.showMondayRebootOption && form.includeMondayReboot) {
@@ -143,7 +141,7 @@ const DutyLogModal: React.FC<{
               <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm leading-7 text-gray-700">
                 <div>四、值班台無線電及設備清點：</div>
                 <div className="text-xs font-bold text-blue-600">（由下方欄位自動帶入）</div>
-                <div>車裝台、固定台、手提台、車輛、機車、GPS、相機、平板</div>
+                <div>車裝台、固定台、手提台、車輛、機車、衛星電話、平板</div>
               </div>
             </div>
 

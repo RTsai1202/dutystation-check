@@ -5,7 +5,7 @@ export const DEFAULT_DUTY_LOG_CONFIG: DutyLogConfig = {
     line1: '一、上述時間值班無異狀。',
     line2: '二、維護駐地安全、值班室清潔，無線電通訊良好。',
     incidents: '三、火警 {fireCount} 件、救護 {emsCount} 件。',
-    equipment: '四、值班台無線電及設備清點：車裝台 {vehicleRadio} 台、固定台 {fixedRadio} 台、手提台 {portableRadio} 台、車輛 {vehicle} 台、機車 {motorcycle} 台、GPS {gps} 台、相機 {camera} 台、平板 {tablet} 台',
+    equipment: '四、值班台無線電及設備清點：車裝台 {vehicleRadio} 台、固定台 {fixedRadio} 台、手提台 {portableRadio} 台、車輛 {vehicle} 台、機車 {motorcycle} 台、衛星電話 {satellitePhone} 台、平板 {tablet} 台',
   },
   equipmentCounts: {
     vehicleRadio: 0,
@@ -13,8 +13,7 @@ export const DEFAULT_DUTY_LOG_CONFIG: DutyLogConfig = {
     portableRadio: 0,
     vehicle: 0,
     motorcycle: 0,
-    gps: 0,
-    camera: 0,
+    satellitePhone: 0,
     tablet: 0,
   },
 };

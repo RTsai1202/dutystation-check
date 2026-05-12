@@ -53,8 +53,7 @@ export interface DutyLogEquipmentCounts {
   portableRadio: number;
   vehicle: number;
   motorcycle: number;
-  gps: number;
-  camera: number;
+  satellitePhone: number;
   tablet: number;
 }
 
