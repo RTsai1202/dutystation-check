@@ -418,7 +418,7 @@ const App: React.FC = () => {
       fireCount: 0,
       emsCount: 0,
       equipmentCounts: { ...dutyLogConfig.equipmentCounts },
-      supplement: '',
+      supplements: [],
       includeMondayReboot: showMondayRebootOption,
       showMondayRebootOption,
     });

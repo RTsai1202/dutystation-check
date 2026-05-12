@@ -10,12 +10,24 @@ export type DutyLogFormState = {
   fireCount: number;
   emsCount: number;
   equipmentCounts: DutyLogEquipmentCounts;
-  supplement: string;
+  supplements: string[];
   includeMondayReboot: boolean;
   showMondayRebootOption: boolean;
 };
 
-export const MONDAY_REBOOT_LINE = '五、重開機派遣電腦。';
+export const MONDAY_REBOOT_TEXT = '重開機派遣電腦。';
+export const MONDAY_REBOOT_LINE = `五、${MONDAY_REBOOT_TEXT}`;
+
+const CHINESE_DIGITS = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+export const toChineseNumeral = (n: number): string => {
+  if (n <= 0) return '零';
+  if (n < 10) return CHINESE_DIGITS[n];
+  if (n === 10) return '十';
+  if (n < 20) return '十' + CHINESE_DIGITS[n - 10];
+  const tens = Math.floor(n / 10);
+  const ones = n % 10;
+  return CHINESE_DIGITS[tens] + '十' + (ones ? CHINESE_DIGITS[ones] : '');
+};
 
 export const EQUIPMENT_FIELDS: Array<{ key: keyof DutyLogEquipmentCounts; label: string }> = [
   { key: 'vehicleRadio', label: '車裝台' },
@@ -53,12 +65,17 @@ export const buildDutyLogText = (form: DutyLogFormState) => {
     `四、值班台無線電及設備清點：車裝台 ${form.equipmentCounts.vehicleRadio} 台、固定台 ${form.equipmentCounts.fixedRadio} 台、手提台 ${form.equipmentCounts.portableRadio} 台、車輛 ${form.equipmentCounts.vehicle} 台、機車 ${form.equipmentCounts.motorcycle} 台、衛星電話 ${form.equipmentCounts.satellitePhone} 台、平板 ${form.equipmentCounts.tablet} 台`,
   ].map(line => line.trim()).filter(Boolean);
 
+  let nextIndex = 5;
   if (form.showMondayRebootOption && form.includeMondayReboot) {
-    lines.push(MONDAY_REBOOT_LINE);
+    lines.push(`${toChineseNumeral(nextIndex)}、${MONDAY_REBOOT_TEXT}`);
+    nextIndex += 1;
   }
 
-  const supplement = form.supplement.trim();
-  if (supplement) lines.push(supplement);
+  const supplements = (form.supplements || []).map(s => s.trim()).filter(Boolean);
+  supplements.forEach(text => {
+    lines.push(`${toChineseNumeral(nextIndex)}、${text}`);
+    nextIndex += 1;
+  });
 
   return lines.join('\n');
 };
@@ -178,13 +195,9 @@ const DutyLogModal: React.FC<{
               <h3 className="text-sm font-bold text-gray-800">送出內容預覽</h3>
               <button
                 onClick={() => setShowSupplementEditor(true)}
-                className={`rounded-xl border px-3 py-1.5 text-xs font-bold shadow-sm transition-colors ${
-                  form.supplement.trim()
-                    ? 'border-sky-500 bg-sky-500 text-white hover:bg-sky-600'
-                    : 'border-sky-500 bg-sky-500 text-white hover:bg-sky-600'
-                }`}
+                className="rounded-xl border border-sky-500 bg-sky-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-sky-600"
               >
-                {form.supplement.trim() ? '編輯本次補充事項' : '增加本次補充事項'}
+                {form.supplements.some(s => s.trim()) ? `編輯本次補充事項（${form.supplements.filter(s => s.trim()).length}）` : '增加本次補充事項'}
               </button>
             </div>
             <textarea
@@ -325,42 +338,104 @@ const DutyLogModal: React.FC<{
         </div>
       </div>
 
-      {showSupplementEditor && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/30 p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl">
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-gray-900">本次補充事項</h3>
-                <p className="text-xs text-gray-500">只會暫存在這次送出前，送出後不會保存。</p>
+      {showSupplementEditor && (() => {
+        const startIndex = form.showMondayRebootOption && form.includeMondayReboot ? 6 : 5;
+        const updateSupplement = (idx: number, value: string) => {
+          const next = [...form.supplements];
+          next[idx] = value;
+          onChange({ ...form, supplements: next });
+        };
+        const removeSupplement = (idx: number) => {
+          onChange({ ...form, supplements: form.supplements.filter((_, i) => i !== idx) });
+        };
+        const addSupplement = () => {
+          onChange({ ...form, supplements: [...form.supplements, ''] });
+        };
+        const items = form.supplements.length > 0 ? form.supplements : [''];
+        if (form.supplements.length === 0 && items.length === 1) {
+          // ensure state has at least one row so input is controlled
+          // (no-op; rendered from items)
+        }
+        return (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/30 p-4">
+            <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">本次補充事項</h3>
+                  <p className="text-xs text-gray-500">每條一行，會自動以「{toChineseNumeral(startIndex)}、{toChineseNumeral(startIndex + 1)}、…」編號接續。送出後不會保存。</p>
+                </div>
+                <button onClick={() => setShowSupplementEditor(false)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+                  <X size={18} />
+                </button>
               </div>
-              <button onClick={() => setShowSupplementEditor(false)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
-                <X size={18} />
-              </button>
-            </div>
-            <textarea
-              autoFocus
-              className="min-h-[180px] w-full rounded-xl border border-gray-300 p-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              value={form.supplement}
-              onChange={(e) => onChange({ ...form, supplement: e.target.value })}
-              placeholder="輸入本次需要附加到工作紀錄最後的內容。"
-            />
-            <div className="mt-4 flex justify-end gap-2">
+              <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                {items.map((value, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <span className="w-12 flex-shrink-0 text-right text-sm font-bold text-sky-600">
+                      {toChineseNumeral(startIndex + idx)}、
+                    </span>
+                    <input
+                      autoFocus={idx === items.length - 1}
+                      className="flex-grow rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      value={value}
+                      onChange={(e) => {
+                        if (form.supplements.length === 0) {
+                          onChange({ ...form, supplements: [e.target.value] });
+                        } else {
+                          updateSupplement(idx, e.target.value);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (form.supplements.length === 0) {
+                            onChange({ ...form, supplements: [value, ''] });
+                          } else {
+                            addSupplement();
+                          }
+                        }
+                      }}
+                      placeholder="輸入一條補充事項"
+                    />
+                    <button
+                      onClick={() => {
+                        if (form.supplements.length === 0) return;
+                        removeSupplement(idx);
+                      }}
+                      disabled={form.supplements.length === 0}
+                      className="flex-shrink-0 rounded-lg p-2 text-gray-300 hover:bg-red-50 hover:text-red-500 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-300"
+                      title="刪除這條"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
               <button
-                onClick={() => onChange({ ...form, supplement: '' })}
-                className="rounded-xl px-4 py-2 text-sm font-bold text-gray-500 hover:bg-gray-50"
+                onClick={addSupplement}
+                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-gray-300 py-2.5 text-sm font-bold text-gray-500 hover:border-sky-400 hover:bg-sky-50 hover:text-sky-600"
               >
-                清空
+                <Plus size={16} />
+                新增一條
               </button>
-              <button
-                onClick={() => setShowSupplementEditor(false)}
-                className="rounded-xl bg-blue-600 px-5 py-2 text-sm font-bold text-white shadow-lg shadow-blue-100 hover:bg-blue-700"
-              >
-                完成
-              </button>
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  onClick={() => onChange({ ...form, supplements: [] })}
+                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-500 hover:bg-gray-50"
+                >
+                  清空
+                </button>
+                <button
+                  onClick={() => setShowSupplementEditor(false)}
+                  className="rounded-xl bg-blue-600 px-5 py-2 text-sm font-bold text-white shadow-lg shadow-blue-100 hover:bg-blue-700"
+                >
+                  完成
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };
