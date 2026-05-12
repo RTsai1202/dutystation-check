@@ -47,6 +47,29 @@ export interface WorkRecord {
   groupId?: string; // 所屬群組 ID，undefined 表示「未分類」
 }
 
+export interface DutyLogEquipmentCounts {
+  vehicleRadio: number;
+  fixedRadio: number;
+  portableRadio: number;
+  vehicle: number;
+  motorcycle: number;
+  gps: number;
+  camera: number;
+  tablet: number;
+}
+
+export interface DutyLogTemplates {
+  line1: string;
+  line2: string;
+  incidents: string;
+  equipment: string;
+}
+
+export interface DutyLogConfig {
+  templates: DutyLogTemplates;
+  equipmentCounts: DutyLogEquipmentCounts;
+}
+
 export interface AppState {
   checkedItems: Record<string, boolean>;
   handoverItems: HandoverItem[];

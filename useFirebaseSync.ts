@@ -9,6 +9,7 @@ import {
     TrashedItem,
     WorkRecord,
     WorkRecordGroup,
+    DutyLogConfig,
 } from './types';
 
 // 資料庫路徑定義
@@ -23,6 +24,7 @@ export interface FirebaseData {
     workRecords: WorkRecord[];
     workRecordGroups: WorkRecordGroup[];
     trashedItems: TrashedItem[];
+    dutyLogConfig?: Partial<DutyLogConfig>;
 }
 
 interface UseFirebaseSyncResult {
@@ -33,6 +35,7 @@ interface UseFirebaseSyncResult {
     saveWorkRecords: (records: WorkRecord[]) => void;
     saveWorkRecordGroups: (groups: WorkRecordGroup[]) => void;
     saveTrash: (items: TrashedItem[]) => void;
+    saveDutyLogConfig: (config: DutyLogConfig) => void;
 }
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -49,6 +52,7 @@ function parseFirebaseSnapshot(val: any): FirebaseData {
         handoverItems: val?.state?.handoverItems || [],
         workRecords: val?.workRecords || [],
         workRecordGroups: val?.workRecordGroups || [],
+        dutyLogConfig: val?.dutyLogConfig || val?.config?.dutyLog,
         trashedItems: Array.isArray(rawTrash)
             ? rawTrash.filter(item => item && (now - item.trashedAt) < THIRTY_DAYS_MS)
             : [],
@@ -133,6 +137,11 @@ export function useFirebaseSync(): UseFirebaseSyncResult {
         set(ref(database, `${DB_PATH}/trash`), sanitize(items));
     }, []);
 
+    const saveDutyLogConfig = useCallback((config: DutyLogConfig) => {
+        markWrite();
+        set(ref(database, `${DB_PATH}/dutyLogConfig`), sanitize(config));
+    }, []);
+
     return {
         data,
         isLoading,
@@ -141,5 +150,6 @@ export function useFirebaseSync(): UseFirebaseSyncResult {
         saveWorkRecords,
         saveWorkRecordGroups,
         saveTrash,
+        saveDutyLogConfig,
     };
 }

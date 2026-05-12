@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { BASIC_TASKS as INITIAL_BASIC_TASKS, SHIFT_SECTIONS as INITIAL_SHIFT_SECTIONS } from './constants';
+import { BASIC_TASKS as INITIAL_BASIC_TASKS, DEFAULT_DUTY_LOG_CONFIG, SHIFT_SECTIONS as INITIAL_SHIFT_SECTIONS } from './constants';
 import { CheckboxItem } from './components/CheckboxItem';
 import { StatusDropdown } from './components/StatusDropdown';
 import ScheduleEditor from './components/ScheduleEditor';
 import WorkRecordModal from './components/WorkRecordModal';
-import { TaskItem, ShiftSection, HandoverItem, StatusConfig, WorkRecord, WorkRecordGroup, TrashedItem } from './types';
+import DutyLogModal, { buildDutyLogText, DutyLogFormState, normalizeEquipmentCounts, shouldOfferMondayReboot } from './components/DutyLogModal';
+import { DutyLogConfig, TaskItem, ShiftSection, HandoverItem, StatusConfig, WorkRecord, WorkRecordGroup, TrashedItem } from './types';
 import {
   DndContext,
   DragOverlay,
@@ -50,6 +51,7 @@ import {
   Info,
   Copy,
   Search,
+  CalendarOff,
 } from 'lucide-react';
 import { RichTextEditor } from './components/RichTextEditor';
 import { RichTextDisplay } from './components/RichTextDisplay';
@@ -58,6 +60,9 @@ import { useFirebaseSync } from './useFirebaseSync';
 
 const ACCESS_PASSWORD = '22792947';
 const AUTH_STORAGE_KEY = 'dutystation_auth';
+const DUTY_LOG_TASK_ID = 'basic_log_work';
+const LEGACY_DUTY_LOG_LINE_1 = '一、上述時間值班無異狀。';
+const LEGACY_DUTY_LOG_LINE_2 = '二、維護駐地安全、值班室清潔，無線電通訊良好。';
 
 const DEFAULT_STATUSES: StatusConfig[] = [
   { id: 'status_pending', label: '待處理', color: '#94a3b8' },
@@ -67,6 +72,52 @@ const DEFAULT_STATUSES: StatusConfig[] = [
 ];
 
 const getNamespacedId = (shiftId: string, taskId: string) => shiftId + '::' + taskId;
+
+const sanitizeBasicTasks = (tasks: TaskItem[]) => {
+  const cleaned = tasks
+    .filter(task => {
+      if (task.id === DUTY_LOG_TASK_ID) return true;
+      const isDuplicateDutyLog = task.label.includes('登打工作紀錄') && /週一|重開|重啟|電腦|08-12/.test(task.label + (task.subtext || ''));
+      return !isDuplicateDutyLog;
+    })
+    .map(task => {
+      if (task.id === 'basic_broadcast_vol' && task.subtext === LEGACY_DUTY_LOG_LINE_1) {
+        const { subtext, ...rest } = task;
+        return rest;
+      }
+      if (task.id === 'basic_external_line' && task.subtext === LEGACY_DUTY_LOG_LINE_2) {
+        const { subtext, ...rest } = task;
+        return rest;
+      }
+      return task;
+    });
+
+  if (cleaned.some(task => task.id === DUTY_LOG_TASK_ID)) return cleaned;
+  return [...cleaned, { id: DUTY_LOG_TASK_ID, label: '登打工作紀錄', link: 'https://eip.tccfd.gov.tw/login.php' }];
+};
+
+const buildDutyLogFromConfig = (rawConfig: Partial<DutyLogConfig> | undefined, rawBasicTasks: TaskItem[] | undefined): DutyLogConfig => {
+  const templates = { ...DEFAULT_DUTY_LOG_CONFIG.templates, ...(rawConfig?.templates || {}) };
+  const logTaskSubtext = rawBasicTasks?.find(task => task.id === DUTY_LOG_TASK_ID)?.subtext?.trim();
+  const legacyLine1 = rawBasicTasks?.find(task => task.id === 'basic_broadcast_vol')?.subtext?.trim();
+  const legacyLine2 = rawBasicTasks?.find(task => task.id === 'basic_external_line')?.subtext?.trim();
+
+  if (!rawConfig?.templates && logTaskSubtext) {
+    const lines = logTaskSubtext.split('\n').map(line => line.trim()).filter(Boolean);
+    templates.line1 = lines[0] || templates.line1;
+    templates.line2 = lines[1] || templates.line2;
+    templates.incidents = lines[2] || templates.incidents;
+    templates.equipment = lines.slice(3).join('\n') || templates.equipment;
+  } else if (!rawConfig?.templates) {
+    if (legacyLine1) templates.line1 = legacyLine1;
+    if (legacyLine2) templates.line2 = legacyLine2;
+  }
+
+  return {
+    templates,
+    equipmentCounts: normalizeEquipmentCounts(rawConfig?.equipmentCounts),
+  };
+};
 
 // --- 密碼驗證閘門 ---
 const PasswordGate: React.FC<{ onAuthenticated: () => void }> = ({ onAuthenticated }) => {
@@ -142,12 +193,13 @@ const App: React.FC = () => {
   const configLoaded = useRef(false);
 
   // --- Firebase 即時同步 ---
-  const { data: firebaseData, isLoading, saveConfig, saveState, saveWorkRecords, saveWorkRecordGroups, saveTrash } = useFirebaseSync();
+  const { data: firebaseData, isLoading, saveConfig, saveState, saveWorkRecords, saveWorkRecordGroups, saveTrash, saveDutyLogConfig } = useFirebaseSync();
 
   // --- Configuration State ---
   const [basicTasks, setBasicTasks] = useState<TaskItem[]>(INITIAL_BASIC_TASKS);
   const [shiftSections, setShiftSections] = useState<ShiftSection[]>(INITIAL_SHIFT_SECTIONS);
   const [statusConfigs, setStatusConfigs] = useState<StatusConfig[]>(DEFAULT_STATUSES);
+  const [dutyLogConfig, setDutyLogConfig] = useState<DutyLogConfig>(DEFAULT_DUTY_LOG_CONFIG);
 
   // --- Operational State ---
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
@@ -160,15 +212,21 @@ const App: React.FC = () => {
   const [workRecords, setWorkRecords] = useState<WorkRecord[]>([]);
   const [workRecordGroups, setWorkRecordGroups] = useState<WorkRecordGroup[]>([]);
   const [showWorkRecordModal, setShowWorkRecordModal] = useState(false);
+  const [dutyLogForm, setDutyLogForm] = useState<DutyLogFormState | null>(null);
+  const [openDutyLogLinksAfterSubmit, setOpenDutyLogLinksAfterSubmit] = useState<string[]>([]);
+  const [dutyLogCopyMessage, setDutyLogCopyMessage] = useState('');
   const [trashedItems, setTrashedItems] = useState<TrashedItem[]>([]);
   const [showTrash, setShowTrash] = useState(false);
+  const [showHiddenTasksModal, setShowHiddenTasksModal] = useState(false);
 
   // --- 從 Firebase 載入資料 ---
   useEffect(() => {
     if (!firebaseData) return;
-    if (firebaseData.basicTasks?.length > 0) setBasicTasks(firebaseData.basicTasks);
+    const rawBasicTasks = firebaseData.basicTasks?.length > 0 ? firebaseData.basicTasks : INITIAL_BASIC_TASKS;
+    setBasicTasks(sanitizeBasicTasks(rawBasicTasks));
     if (firebaseData.shiftSections?.length > 0) setShiftSections(firebaseData.shiftSections);
     if (firebaseData.statusConfigs?.length > 0) setStatusConfigs(firebaseData.statusConfigs);
+    setDutyLogConfig(buildDutyLogFromConfig(firebaseData.dutyLogConfig, rawBasicTasks));
     setCheckedItems(firebaseData.checkedItems || {});
     setHandoverItems(firebaseData.handoverItems || []);
     setWorkRecords(firebaseData.workRecords || []);
@@ -220,6 +278,11 @@ const App: React.FC = () => {
     saveTrash(trashedItems);
   }, [trashedItems]);
 
+  useEffect(() => {
+    if (!configLoaded.current) return;
+    saveDutyLogConfig(dutyLogConfig);
+  }, [dutyLogConfig]);
+
   // --- Helper: Check if task should be visible based on day/month ---
   const isTaskVisible = (task: TaskItem): boolean => {
     const now = new Date();
@@ -237,6 +300,19 @@ const App: React.FC = () => {
     ...section,
     tasks: section.tasks.filter(isTaskVisible)
   }));
+
+  // Tasks hidden today due to showOnDays / showInMonths schedule
+  type HiddenTaskEntry = { task: TaskItem; sectionId: string; sectionTitle: string };
+  const hiddenTasks: HiddenTaskEntry[] = [
+    ...basicTasks
+      .filter(t => !isTaskVisible(t) && (t.showOnDays?.length || t.showInMonths?.length))
+      .map(task => ({ task, sectionId: 'basic', sectionTitle: '基本事項' })),
+    ...shiftSections.flatMap(section =>
+      section.tasks
+        .filter(t => !isTaskVisible(t) && (t.showOnDays?.length || t.showInMonths?.length))
+        .map(task => ({ task, sectionId: section.id, sectionTitle: section.title }))
+    ),
+  ];
 
   // --- Handlers ---
   const handleToggle = (uniqueId: string) => {
@@ -274,6 +350,7 @@ const App: React.FC = () => {
       setBasicTasks(INITIAL_BASIC_TASKS);
       setShiftSections(INITIAL_SHIFT_SECTIONS);
       setStatusConfigs(DEFAULT_STATUSES);
+      setDutyLogConfig(DEFAULT_DUTY_LOG_CONFIG);
       setHandoverItems([]);
     }
   };
@@ -331,6 +408,56 @@ const App: React.FC = () => {
     if (window.confirm('確定要清空垃圾桶嗎？此操作無法復原。')) {
       setTrashedItems([]);
     }
+  };
+
+  const openDutyLogModal = (linksAfterSubmit: string[] = []) => {
+    const showMondayRebootOption = shouldOfferMondayReboot(new Date());
+    setOpenDutyLogLinksAfterSubmit(linksAfterSubmit);
+    setDutyLogForm({
+      templates: { ...dutyLogConfig.templates },
+      fireCount: 0,
+      emsCount: 0,
+      equipmentCounts: { ...dutyLogConfig.equipmentCounts },
+      supplement: '',
+      includeMondayReboot: showMondayRebootOption,
+      showMondayRebootOption,
+    });
+  };
+
+  const copyText = useCallback(async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+  }, []);
+
+  const handleDutyLogSubmit = async () => {
+    if (!dutyLogForm) return;
+    const nextConfig: DutyLogConfig = {
+      templates: dutyLogForm.templates,
+      equipmentCounts: normalizeEquipmentCounts(dutyLogForm.equipmentCounts),
+    };
+    const nextForm = { ...dutyLogForm, equipmentCounts: nextConfig.equipmentCounts };
+
+    await copyText(buildDutyLogText(nextForm));
+    setDutyLogConfig(nextConfig);
+    setDutyLogForm(null);
+    openDutyLogLinksAfterSubmit.forEach((url, index) => {
+      setTimeout(() => {
+        window.open(url, '_blank');
+      }, (index + 1) * 300);
+    });
+    setOpenDutyLogLinksAfterSubmit([]);
+    setDutyLogCopyMessage('已複製值班工作紀錄');
+    window.setTimeout(() => setDutyLogCopyMessage(''), 2200);
   };
 
   // --- Mobile detection ---
@@ -528,6 +655,19 @@ const App: React.FC = () => {
               工作記錄
             </button>
             <button
+              onClick={() => setShowHiddenTasksModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg border border-gray-200 hover:border-purple-200 transition-all"
+              title="檢視/編輯今日未顯示的排程項目"
+            >
+              <CalendarOff size={13} />
+              排程外項目
+              {hiddenTasks.length > 0 && (
+                <span className="ml-0.5 text-[10px] font-bold px-1.5 py-0.5 bg-purple-100 text-purple-600 rounded-full">
+                  {hiddenTasks.length}
+                </span>
+              )}
+            </button>
+            <button
               onClick={clearShiftChecks}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-200 transition-all"
               title="清空此時段所有勾選"
@@ -562,8 +702,8 @@ const App: React.FC = () => {
                     task={task}
                     sectionId="basic"
                     isEditMode={true}
-                    isChecked={!!checkedItems[getNamespacedId(selectedShiftId, task.id)]}
-                    onToggle={() => handleToggle(getNamespacedId(selectedShiftId, task.id))}
+                    isChecked={task.id === DUTY_LOG_TASK_ID ? false : !!checkedItems[getNamespacedId(selectedShiftId, task.id)]}
+                    onToggle={(linksAfterSubmit?: string[]) => task.id === DUTY_LOG_TASK_ID ? openDutyLogModal(linksAfterSubmit) : handleToggle(getNamespacedId(selectedShiftId, task.id))}
                     isEditing={editingTaskId === task.id}
                     setEditing={() => setEditingTaskId(editingTaskId === task.id ? null : task.id)}
                     onDelete={() => handleDeleteTask(task.id, 'basic')}
@@ -706,6 +846,13 @@ const App: React.FC = () => {
           </DragOverlay>
         </DndContext>
 
+        <HiddenTasksModal
+          isOpen={showHiddenTasksModal}
+          onClose={() => setShowHiddenTasksModal(false)}
+          entries={hiddenTasks}
+          onUpdateTask={handleUpdateTask}
+          onDeleteTask={handleDeleteTask}
+        />
         <WorkRecordModal
           isOpen={showWorkRecordModal}
           onClose={() => setShowWorkRecordModal(false)}
@@ -714,6 +861,26 @@ const App: React.FC = () => {
           groups={workRecordGroups}
           onUpdateGroups={setWorkRecordGroups}
         />
+        <DutyLogModal
+          form={dutyLogForm}
+          onChange={setDutyLogForm}
+          onClose={() => {
+            setDutyLogForm(null);
+            setOpenDutyLogLinksAfterSubmit([]);
+          }}
+          onSubmit={handleDutyLogSubmit}
+          handoverItems={handoverItems}
+          onUpdateHandoverItems={setHandoverItems}
+          onSelectHandoverStatus={setHandoverStatus}
+          statusConfigs={statusConfigs}
+          onUpdateStatuses={setStatusConfigs}
+          defaultHandoverStatusId={statusConfigs[0]?.id || ''}
+        />
+        {dutyLogCopyMessage && (
+          <div className="fixed bottom-6 left-1/2 z-[10000] -translate-x-1/2 rounded-full bg-gray-900 px-5 py-2.5 text-sm font-bold text-white shadow-xl">
+            {dutyLogCopyMessage}
+          </div>
+        )}
       </main>
     </div>
   );
@@ -872,7 +1039,7 @@ const HeaderWithContextMenu: React.FC<{
 const EditModeTask: React.FC<{
   task: any;
   isChecked?: boolean;
-  onToggle?: () => void;
+  onToggle?: (linksAfterSubmit?: string[]) => void;
   dragHandleProps?: any;
   onEdit: () => void;
   onDelete: () => void;
@@ -939,7 +1106,14 @@ const EditModeTask: React.FC<{
         </div>
 
         {/* Content */}
-        <div className="flex-grow min-w-0">
+        <div
+          onClick={(e) => {
+            if (task.id !== DUTY_LOG_TASK_ID) return;
+            e.stopPropagation();
+            onToggle?.();
+          }}
+          className={`flex-grow min-w-0 ${task.id === DUTY_LOG_TASK_ID ? 'cursor-pointer' : ''}`}
+        >
           <div className={`text-base leading-snug select-none whitespace-pre-wrap ${isChecked ? 'text-gray-800 font-medium' : 'text-gray-600'}`}>
             {task.label}
           </div>
@@ -993,6 +1167,10 @@ const EditModeTask: React.FC<{
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
+                    if (task.id === DUTY_LOG_TASK_ID) {
+                      onToggle?.(urls);
+                      return;
+                    }
                     if (hasLinkedRecords && onCopyRecord && setShowRecordPicker) {
                       if (linkedRecords!.length === 1) {
                         onCopyRecord(linkedRecords![0], urls);
@@ -1010,7 +1188,7 @@ const EditModeTask: React.FC<{
                         window.open(urls[0], '_blank');
                       }, urls.length * 300);
                     }
-                    if (!isChecked && onToggle) {
+                    if (!isChecked && onToggle && task.id !== DUTY_LOG_TASK_ID) {
                       setJustChecked(true);
                       setTimeout(() => setJustChecked(false), 1500);
                       onToggle();
@@ -1113,7 +1291,7 @@ const EditableTask: React.FC<{
   sectionId: string;
   isEditMode: boolean;
   isChecked?: boolean;
-  onToggle?: () => void;
+  onToggle?: (linksAfterSubmit?: string[]) => void;
   isEditing: boolean;
   setEditing: () => void;
   onDelete: () => void;
@@ -1254,6 +1432,53 @@ const EditableTask: React.FC<{
 
   // If we are actively editing this specific task, show the form
   if (isEditing) {
+    if (isHandover) {
+      return (
+        <div className="p-4 rounded-xl border-2 border-indigo-400 bg-indigo-50 shadow-md animate-in zoom-in-95 duration-200">
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">編輯交接事項</span>
+              <button onClick={setEditing} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+            </div>
+            <input
+              className="w-full p-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none shadow-sm"
+              value={task.label}
+              onChange={(e) => onUpdate({ label: e.target.value })}
+              placeholder="交接事項標題"
+              autoFocus
+            />
+            {statusConfigs && onSelectStatus && onUpdateStatuses && (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">狀態</span>
+                <StatusDropdown
+                  currentStatusId={task.statusId}
+                  statusConfigs={statusConfigs}
+                  onSelectStatus={onSelectStatus}
+                  onUpdateStatuses={onUpdateStatuses}
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">說明</span>
+              <RichTextEditor
+                value={task.subtext || ''}
+                onChange={(html) => onUpdate({ subtext: html })}
+                placeholder="交接事項說明"
+              />
+            </div>
+            <div className="flex justify-between items-center pt-2">
+              <button onClick={onDelete} className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1 text-xs">
+                <Trash2 size={16} /> 刪除
+              </button>
+              <button onClick={setEditing} className="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-1 shadow-lg hover:bg-indigo-700 active:scale-95 transition-all">
+                <Check size={16} /> 儲存完成
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="p-4 rounded-xl border-2 border-blue-400 bg-blue-50 shadow-md animate-in zoom-in-95 duration-200">
         <div className="space-y-3">
@@ -1436,93 +1661,174 @@ const EditableTask: React.FC<{
           onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY }); }}
         >
           <div className="flex items-start justify-between gap-3">
-            <div className="flex-grow space-y-1">
-              <div className="text-base font-bold text-gray-800 leading-tight whitespace-pre-wrap">{task.label}</div>
-              {task.subtext && <div className="text-xs text-gray-500 leading-relaxed whitespace-pre-wrap">{task.subtext}</div>}
+            <div className="flex-grow min-w-0 space-y-1">
+              <div className="flex items-center gap-2">
+                {statusConfigs && onSelectStatus && onUpdateStatuses ? (
+                  <StatusDropdown
+                    currentStatusId={task.statusId}
+                    statusConfigs={statusConfigs}
+                    onSelectStatus={onSelectStatus}
+                    onUpdateStatuses={onUpdateStatuses}
+                  />
+                ) : (
+                  <span className="text-[11px] px-3 py-1.5 rounded-full font-bold text-white shrink-0" style={{ backgroundColor: currentStatus?.color || '#94a3b8' }}>
+                    {currentStatus?.label || '無狀態'}
+                  </span>
+                )}
+                <div className="text-base font-bold text-gray-800 leading-tight truncate">{task.label}</div>
+              </div>
+              {task.subtext && (
+                <div className="hidden group-hover:block mt-2 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500 leading-relaxed">
+                  <RichTextDisplay html={task.subtext} />
+                </div>
+              )}
             </div>
             <div className="flex flex-col gap-1 items-end">
-              {linkedRecords.length > 0 && !task.link && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (linkedRecords.length === 1) {
-                      handleCopyRecord(linkedRecords[0]);
-                    } else {
-                      setShowRecordPicker(showRecordPicker ? false : { urls: [] });
-                    }
-                  }}
-                  className="text-gray-400 hover:text-teal-600 p-1 bg-gray-50 rounded-lg transition-colors"
-                  title={linkedRecords.length === 1 ? `複製：${linkedRecords[0].title}` : `複製工作紀錄（${linkedRecords.length} 筆）`}
-                >
-                  <Copy size={16} />
-                </button>
-              )}
-              {task.link && (() => {
-                const urls = task.link!.split('\n').map((u: string) => u.trim()).filter((u: string) => u.length > 0);
-                const hasLinkedRecords = linkedRecords.length > 0;
-                return (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (hasLinkedRecords) {
-                        if (linkedRecords.length === 1) {
-                          handleCopyRecord(linkedRecords[0], urls);
-                        } else {
-                          setShowRecordPicker({ urls });
-                        }
-                      } else {
-                        for (let i = urls.length - 1; i >= 1; i--) {
-                          const url = urls[i];
-                          setTimeout(() => {
-                            window.open(url, '_blank');
-                          }, (urls.length - i) * 300);
-                        }
-                        setTimeout(() => {
-                          window.open(urls[0], '_blank');
-                        }, urls.length * 300);
-                      }
-                    }}
-                    className={`p-1 bg-gray-50 rounded-lg transition-colors ${hasLinkedRecords ? 'text-gray-400 hover:text-teal-600 hover:bg-teal-50' : 'text-gray-400 hover:text-indigo-600'}`}
-                    title={hasLinkedRecords ? '複製紀錄並開啟連結' : (urls.length > 1 ? `開啟 ${urls.length} 個連結` : '開啟連結')}
-                  >
-                    <ExternalLink size={16} />
-                  </button>
-                );
-              })()}
               <button
                 onClick={setEditing}
                 className="p-1.5 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                title="快速編輯"
+                title="編輯交接事項"
               >
                 <Edit2 size={14} />
               </button>
             </div>
           </div>
-          <div className="mt-4 flex items-center justify-between">
-            {statusConfigs && onSelectStatus && onUpdateStatuses ? (
-              <StatusDropdown
-                currentStatusId={task.statusId}
-                statusConfigs={statusConfigs}
-                onSelectStatus={onSelectStatus}
-                onUpdateStatuses={onUpdateStatuses}
-              />
-            ) : (
-              <span className="text-[11px] px-3 py-1.5 rounded-full font-bold text-white" style={{ backgroundColor: currentStatus?.color || '#94a3b8' }}>
-                {currentStatus?.label || '無狀態'}
-              </span>
-            )}
-            {task.link && <span className="text-[10px] text-gray-400 font-mono opacity-50">附連結</span>}
-          </div>
         </div>
         {ctxMenu && <ContextMenu x={ctxMenu.x} y={ctxMenu.y} onEdit={setEditing} onDelete={onDelete} onClose={() => setCtxMenu(null)} />}
-        {recordPickerPortal}
-        {copyToastPortal}
       </>
     );
   }
 
   // Normal view for standard tasks
   return <CheckboxItem task={task} isChecked={isChecked!} onToggle={onToggle!} />;
+};
+
+// --- Hidden Tasks Modal (排程外項目) ---
+type HiddenTasksModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  entries: { task: TaskItem; sectionId: string; sectionTitle: string }[];
+  onUpdateTask: (taskId: string, sectionId: string, updates: Partial<TaskItem>) => void;
+  onDeleteTask: (taskId: string, sectionId: string) => void;
+};
+
+const HiddenTasksModal: React.FC<HiddenTasksModalProps> = ({ isOpen, onClose, entries, onUpdateTask, onDeleteTask }) => {
+  if (!isOpen) return null;
+
+  const grouped = entries.reduce<Record<string, { sectionTitle: string; tasks: { task: TaskItem; sectionId: string }[] }>>((acc, e) => {
+    if (!acc[e.sectionId]) acc[e.sectionId] = { sectionTitle: e.sectionTitle, tasks: [] };
+    acc[e.sectionId].tasks.push({ task: e.task, sectionId: e.sectionId });
+    return acc;
+  }, {});
+
+  const todayDay = new Date().getDay();
+  const todayMonth = new Date().getMonth() + 1;
+  const dayLabels = ['日', '一', '二', '三', '四', '五', '六'];
+
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="bg-purple-600 px-5 py-4 text-white flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <CalendarOff size={18} />
+            <h2 className="text-lg font-bold">排程外項目</h2>
+            <span className="text-xs opacity-80">
+              今日 週{dayLabels[todayDay]}・{todayMonth}月
+            </span>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="px-5 py-3 bg-purple-50 border-b border-purple-100 text-xs text-purple-700">
+          以下任務因「顯示排程」設定，今天不會出現在主畫面。可在此編輯排程、重新命名或刪除。
+        </div>
+        <div className="flex-grow overflow-y-auto p-5 space-y-5">
+          {entries.length === 0 ? (
+            <div className="text-center py-12 text-gray-400 text-sm italic">
+              目前沒有被排程隱藏的項目
+            </div>
+          ) : (
+            Object.entries(grouped).map(([sectionId, group]) => (
+              <div key={sectionId}>
+                <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                  {group.sectionTitle}
+                  <span className="text-gray-300 font-normal">（{group.tasks.length}）</span>
+                </div>
+                <div className="space-y-2">
+                  {group.tasks.map(({ task, sectionId }) => (
+                    <HiddenTaskRow
+                      key={task.id}
+                      task={task}
+                      onUpdate={(updates) => onUpdateTask(task.id, sectionId, updates)}
+                      onDelete={() => {
+                        if (window.confirm(`確定要刪除「${task.label}」？`)) {
+                          onDeleteTask(task.id, sectionId);
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+const HiddenTaskRow: React.FC<{
+  task: TaskItem;
+  onUpdate: (updates: Partial<TaskItem>) => void;
+  onDelete: () => void;
+}> = ({ task, onUpdate, onDelete }) => {
+  const [label, setLabel] = useState(task.label);
+  const dayLabels = ['日', '一', '二', '三', '四', '五', '六'];
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-3 bg-white hover:border-purple-200 transition-colors">
+      <div className="flex items-start gap-2 mb-2">
+        <input
+          type="text"
+          value={label}
+          onChange={e => setLabel(e.target.value)}
+          onBlur={() => { if (label !== task.label) onUpdate({ label }); }}
+          className="flex-grow text-sm font-medium text-gray-800 border-b border-transparent hover:border-gray-200 focus:border-purple-400 focus:outline-none px-1 py-0.5"
+        />
+        <button
+          onClick={onDelete}
+          className="flex-shrink-0 text-gray-300 hover:text-red-500 p-1 rounded hover:bg-red-50 transition-colors"
+          title="刪除"
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-1 mb-2 text-[10px]">
+        {task.showOnDays?.length ? (
+          <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded">
+            每週{task.showOnDays.map(d => dayLabels[d]).join('、')}
+          </span>
+        ) : null}
+        {task.showInMonths?.length ? (
+          <span className="px-1.5 py-0.5 bg-green-50 text-green-600 rounded">
+            {task.showInMonths.join('、')}月
+          </span>
+        ) : null}
+      </div>
+      <ScheduleEditor
+        showOnDays={task.showOnDays}
+        showInMonths={task.showInMonths}
+        onUpdateDays={(days) => onUpdate({ showOnDays: days })}
+        onUpdateMonths={(months) => onUpdate({ showInMonths: months })}
+      />
+    </div>
+  );
 };
 
 export default App;

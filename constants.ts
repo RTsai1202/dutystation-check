@@ -1,4 +1,23 @@
-import { ShiftSection, TaskItem } from './types';
+import { DutyLogConfig, ShiftSection, TaskItem } from './types';
+
+export const DEFAULT_DUTY_LOG_CONFIG: DutyLogConfig = {
+  templates: {
+    line1: '一、上述時間值班無異狀。',
+    line2: '二、維護駐地安全、值班室清潔，無線電通訊良好。',
+    incidents: '三、火警 {fireCount} 件、救護 {emsCount} 件。',
+    equipment: '四、值班台無線電及設備清點：車裝台 {vehicleRadio} 台、固定台 {fixedRadio} 台、手提台 {portableRadio} 台、車輛 {vehicle} 台、機車 {motorcycle} 台、GPS {gps} 台、相機 {camera} 台、平板 {tablet} 台',
+  },
+  equipmentCounts: {
+    vehicleRadio: 0,
+    fixedRadio: 0,
+    portableRadio: 0,
+    vehicle: 0,
+    motorcycle: 0,
+    gps: 0,
+    camera: 0,
+    tablet: 0,
+  },
+};
 
 /**
  * 週期性任務配置說明：
@@ -10,8 +29,8 @@ import { ShiftSection, TaskItem } from './types';
 // Basic Items (Top Section)
 export const BASIC_TASKS: TaskItem[] = [
   { id: 'basic_radio_vol', label: '確認無線電音量' },
-  { id: 'basic_broadcast_vol', label: '確認廣播音量', subtext: '一、上述時間值班無異狀。' },
-  { id: 'basic_external_line', label: '開紅外線', subtext: '二、維護駐地安全、值班室清潔，無線電通訊良好。' },
+  { id: 'basic_broadcast_vol', label: '確認廣播音量' },
+  { id: 'basic_external_line', label: '開紅外線' },
   { id: 'basic_dispatch_sys', label: '登入派遣系統' },
   { id: 'basic_check_radio_tablet', label: '簽值班、確認無線電、平板數量' },
   { id: 'basic_check_vehicle_key', label: '確認車輛、鑰匙' },
