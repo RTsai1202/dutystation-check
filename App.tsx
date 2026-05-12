@@ -417,6 +417,8 @@ const App: React.FC = () => {
       templates: { ...dutyLogConfig.templates },
       fireCount: 0,
       emsCount: 0,
+      rescueCount: 0,
+      otherCount: 0,
       equipmentCounts: { ...dutyLogConfig.equipmentCounts },
       supplements: [],
       includeMondayReboot: showMondayRebootOption,

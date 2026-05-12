@@ -9,6 +9,8 @@ export type DutyLogFormState = {
   templates: DutyLogTemplates;
   fireCount: number;
   emsCount: number;
+  rescueCount: number;
+  otherCount: number;
   equipmentCounts: DutyLogEquipmentCounts;
   supplements: string[];
   includeMondayReboot: boolean;
@@ -61,7 +63,7 @@ export const buildDutyLogText = (form: DutyLogFormState) => {
   const lines = [
     form.templates.line1,
     form.templates.line2,
-    `三、火警 ${form.fireCount} 件、救護 ${form.emsCount} 件。`,
+    `三、火警 ${form.fireCount} 件、救護 ${form.emsCount} 件、救助 ${form.rescueCount} 件、其他 ${form.otherCount} 件。`,
     `四、值班台無線電及設備清點：車裝台 ${form.equipmentCounts.vehicleRadio} 台、固定台 ${form.equipmentCounts.fixedRadio} 台、手提台 ${form.equipmentCounts.portableRadio} 台、車輛 ${form.equipmentCounts.vehicle} 台、機車 ${form.equipmentCounts.motorcycle} 台、衛星電話 ${form.equipmentCounts.satellitePhone} 台、平板 ${form.equipmentCounts.tablet} 台`,
   ].map(line => line.trim()).filter(Boolean);
 
@@ -153,7 +155,7 @@ const DutyLogModal: React.FC<{
               <textarea className="min-h-[56px] w-full rounded-xl border border-gray-300 p-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" value={form.templates.line1} onChange={(e) => updateTemplate('line1', e.target.value)} />
               <textarea className="min-h-[56px] w-full rounded-xl border border-gray-300 p-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" value={form.templates.line2} onChange={(e) => updateTemplate('line2', e.target.value)} />
               <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm leading-7 text-gray-700">
-                三、火警 <span className="rounded-md bg-blue-100 px-2 py-0.5 font-bold text-blue-700">火警數量</span> 件、救護 <span className="rounded-md bg-blue-100 px-2 py-0.5 font-bold text-blue-700">救護數量</span> 件。
+                三、火警 <span className="rounded-md bg-blue-100 px-2 py-0.5 font-bold text-blue-700">火警數量</span> 件、救護 <span className="rounded-md bg-blue-100 px-2 py-0.5 font-bold text-blue-700">救護數量</span> 件、救助 <span className="rounded-md bg-blue-100 px-2 py-0.5 font-bold text-blue-700">救助數量</span> 件、其他 <span className="rounded-md bg-blue-100 px-2 py-0.5 font-bold text-blue-700">其他數量</span> 件。
               </div>
               <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm leading-7 text-gray-700">
                 <div>四、值班台無線電及設備清點：</div>
@@ -162,9 +164,11 @@ const DutyLogModal: React.FC<{
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               <NumberField label="火警" value={form.fireCount} onChange={(value) => onChange({ ...form, fireCount: value })} />
               <NumberField label="救護" value={form.emsCount} onChange={(value) => onChange({ ...form, emsCount: value })} />
+              <NumberField label="救助" value={form.rescueCount} onChange={(value) => onChange({ ...form, rescueCount: value })} />
+              <NumberField label="其他" value={form.otherCount} onChange={(value) => onChange({ ...form, otherCount: value })} />
             </div>
 
             <div className="space-y-3">
