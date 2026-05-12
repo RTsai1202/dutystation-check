@@ -441,6 +441,14 @@ const App: React.FC = () => {
 
   const handleDutyLogSubmit = async () => {
     if (!dutyLogForm) return;
+
+    // 必須在 await 之前同步開新分頁，否則瀏覽器會判定不是使用者觸發而擋下 popup
+    const linksToOpen = openDutyLogLinksAfterSubmit;
+    linksToOpen.forEach(url => {
+      window.open(url, '_blank', 'noopener');
+    });
+    setOpenDutyLogLinksAfterSubmit([]);
+
     const nextConfig: DutyLogConfig = {
       templates: dutyLogForm.templates,
       equipmentCounts: normalizeEquipmentCounts(dutyLogForm.equipmentCounts),
@@ -450,12 +458,6 @@ const App: React.FC = () => {
     await copyText(buildDutyLogText(nextForm));
     setDutyLogConfig(nextConfig);
     setDutyLogForm(null);
-    openDutyLogLinksAfterSubmit.forEach((url, index) => {
-      setTimeout(() => {
-        window.open(url, '_blank');
-      }, (index + 1) * 300);
-    });
-    setOpenDutyLogLinksAfterSubmit([]);
     setDutyLogCopyMessage('已複製值班工作紀錄');
     window.setTimeout(() => setDutyLogCopyMessage(''), 2200);
   };
