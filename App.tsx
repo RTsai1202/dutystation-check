@@ -449,6 +449,10 @@ const App: React.FC = () => {
     });
     setOpenDutyLogLinksAfterSubmit([]);
 
+    // 自動勾起「登打工作紀錄」這個 checkbox
+    const dutyLogCheckId = getNamespacedId(selectedShiftId, DUTY_LOG_TASK_ID);
+    setCheckedItems(prev => ({ ...prev, [dutyLogCheckId]: true }));
+
     const nextConfig: DutyLogConfig = {
       templates: dutyLogForm.templates,
       equipmentCounts: normalizeEquipmentCounts(dutyLogForm.equipmentCounts),
@@ -704,8 +708,9 @@ const App: React.FC = () => {
                     task={task}
                     sectionId="basic"
                     isEditMode={true}
-                    isChecked={task.id === DUTY_LOG_TASK_ID ? false : !!checkedItems[getNamespacedId(selectedShiftId, task.id)]}
-                    onToggle={(linksAfterSubmit?: string[]) => task.id === DUTY_LOG_TASK_ID ? openDutyLogModal(linksAfterSubmit) : handleToggle(getNamespacedId(selectedShiftId, task.id))}
+                    isChecked={!!checkedItems[getNamespacedId(selectedShiftId, task.id)]}
+                    onToggle={() => handleToggle(getNamespacedId(selectedShiftId, task.id))}
+                    onOpenDutyLogModal={openDutyLogModal}
                     isEditing={editingTaskId === task.id}
                     setEditing={() => setEditingTaskId(editingTaskId === task.id ? null : task.id)}
                     onDelete={() => handleDeleteTask(task.id, 'basic')}
@@ -1049,7 +1054,8 @@ const EditModeTask: React.FC<{
   onCopyRecord?: (record: WorkRecord, pendingUrls?: string[]) => void;
   showRecordPicker?: { urls: string[] } | false;
   setShowRecordPicker?: (v: { urls: string[] } | false) => void;
-}> = ({ task, isChecked, onToggle, dragHandleProps, onEdit, onDelete, linkedRecords, onCopyRecord, showRecordPicker, setShowRecordPicker }) => {
+  onOpenDutyLogModal?: (urls?: string[]) => void;
+}> = ({ task, isChecked, onToggle, dragHandleProps, onEdit, onDelete, linkedRecords, onCopyRecord, showRecordPicker, setShowRecordPicker, onOpenDutyLogModal }) => {
   const [justChecked, setJustChecked] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
   const [showNotes, setShowNotes] = useState(false);
@@ -1108,14 +1114,7 @@ const EditModeTask: React.FC<{
         </div>
 
         {/* Content */}
-        <div
-          onClick={(e) => {
-            if (task.id !== DUTY_LOG_TASK_ID) return;
-            e.stopPropagation();
-            onToggle?.();
-          }}
-          className={`flex-grow min-w-0 ${task.id === DUTY_LOG_TASK_ID ? 'cursor-pointer' : ''}`}
-        >
+        <div className="flex-grow min-w-0">
           <div className={`text-base leading-snug select-none whitespace-pre-wrap ${isChecked ? 'text-gray-800 font-medium' : 'text-gray-600'}`}>
             {task.label}
           </div>
@@ -1170,7 +1169,7 @@ const EditModeTask: React.FC<{
                     e.stopPropagation();
                     e.preventDefault();
                     if (task.id === DUTY_LOG_TASK_ID) {
-                      onToggle?.(urls);
+                      onOpenDutyLogModal?.(urls);
                       return;
                     }
                     if (hasLinkedRecords && onCopyRecord && setShowRecordPicker) {
@@ -1305,7 +1304,8 @@ const EditableTask: React.FC<{
   dragHandleProps?: any;
   isDragging?: boolean;
   workRecords?: WorkRecord[];
-}> = ({ task, isEditMode, isChecked, onToggle, isEditing, setEditing, onDelete, onUpdate, statusConfigs, onSelectStatus, onUpdateStatuses, isHandover, dragHandleProps, workRecords }) => {
+  onOpenDutyLogModal?: (urls?: string[]) => void;
+}> = ({ task, isEditMode, isChecked, onToggle, isEditing, setEditing, onDelete, onUpdate, statusConfigs, onSelectStatus, onUpdateStatuses, isHandover, dragHandleProps, workRecords, onOpenDutyLogModal }) => {
   const currentStatus = statusConfigs?.find(s => s.id === task.statusId);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
   const [copyToast, setCopyToast] = useState<{ title: string; content: string; urls: string[] } | null>(null);
@@ -1648,6 +1648,7 @@ const EditableTask: React.FC<{
           onCopyRecord={handleCopyRecord}
           showRecordPicker={showRecordPicker}
           setShowRecordPicker={setShowRecordPicker}
+          onOpenDutyLogModal={onOpenDutyLogModal}
         />
         {recordPickerPortal}
         {copyToastPortal}
