@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { BASIC_TASKS as INITIAL_BASIC_TASKS, DEFAULT_DUTY_LOG_CONFIG, SHIFT_SECTIONS as INITIAL_SHIFT_SECTIONS } from './constants';
+import { DEFAULT_WORK_RECORDS } from './defaultWorkRecordTemplates';
 import { CheckboxItem } from './components/CheckboxItem';
 import { StatusDropdown } from './components/StatusDropdown';
 import ScheduleEditor from './components/ScheduleEditor';
@@ -229,7 +230,7 @@ const App: React.FC = () => {
     setDutyLogConfig(buildDutyLogFromConfig(firebaseData.dutyLogConfig, rawBasicTasks));
     setCheckedItems(firebaseData.checkedItems || {});
     setHandoverItems(firebaseData.handoverItems || []);
-    setWorkRecords(firebaseData.workRecords || []);
+    setWorkRecords(firebaseData.workRecords?.length > 0 ? firebaseData.workRecords : DEFAULT_WORK_RECORDS);
     setWorkRecordGroups(firebaseData.workRecordGroups || []);
     setTrashedItems(firebaseData.trashedItems || []);
     configLoaded.current = true;
