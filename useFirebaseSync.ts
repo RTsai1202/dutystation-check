@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { ref, onValue, set, get } from 'firebase/database';
+import { ref, onValue, set, get, update } from 'firebase/database';
 import { database } from './firebase';
+import { deriveWorkRecordsInitialized } from './workRecordInitialization';
 import {
     TaskItem,
     ShiftSection,
@@ -23,6 +24,7 @@ export interface FirebaseData {
     handoverItems: HandoverItem[];
     workRecords: WorkRecord[];
     workRecordGroups: WorkRecordGroup[];
+    workRecordsInitialized: boolean;
     trashedItems: TrashedItem[];
     dutyLogConfig?: Partial<DutyLogConfig>;
 }
@@ -43,6 +45,8 @@ const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 function parseFirebaseSnapshot(val: any): FirebaseData {
     const now = Date.now();
     const rawTrash: TrashedItem[] = val?.trash || [];
+    const workRecords: WorkRecord[] = Array.isArray(val?.workRecords) ? val.workRecords : [];
+    const workRecordGroups: WorkRecordGroup[] = Array.isArray(val?.workRecordGroups) ? val.workRecordGroups : [];
 
     return {
         basicTasks: val?.config?.basic || [],
@@ -50,8 +54,13 @@ function parseFirebaseSnapshot(val: any): FirebaseData {
         statusConfigs: val?.config?.statuses || [],
         checkedItems: val?.state?.checkedItems || {},
         handoverItems: val?.state?.handoverItems || [],
-        workRecords: val?.workRecords || [],
-        workRecordGroups: val?.workRecordGroups || [],
+        workRecords,
+        workRecordGroups,
+        workRecordsInitialized: deriveWorkRecordsInitialized(
+            val?.workRecordsInitialized === true,
+            workRecords,
+            workRecordGroups,
+        ),
         dutyLogConfig: val?.dutyLogConfig || val?.config?.dutyLog,
         trashedItems: Array.isArray(rawTrash)
             ? rawTrash.filter(item => item && (now - item.trashedAt) < THIRTY_DAYS_MS)
@@ -76,7 +85,6 @@ export function useFirebaseSync(): UseFirebaseSyncResult {
             setIsLoading(false);
         }).catch((error) => {
             console.error('Firebase 首次讀取失敗:', error);
-            setData(parseFirebaseSnapshot(null));
             setIsLoading(false);
         });
 
@@ -124,7 +132,10 @@ export function useFirebaseSync(): UseFirebaseSyncResult {
 
     const saveWorkRecords = useCallback((records: WorkRecord[]) => {
         markWrite();
-        set(ref(database, `${DB_PATH}/workRecords`), sanitize(records));
+        update(ref(database, DB_PATH), {
+            workRecords: sanitize(records),
+            workRecordsInitialized: true,
+        });
     }, []);
 
     const saveWorkRecordGroups = useCallback((groups: WorkRecordGroup[]) => {
