@@ -194,7 +194,7 @@ const App: React.FC = () => {
   const configLoaded = useRef(false);
 
   // --- Firebase 即時同步 ---
-  const { data: firebaseData, isLoading, saveConfig, saveState, saveWorkRecords, saveWorkRecordGroups, saveTrash, saveDutyLogConfig } = useFirebaseSync();
+  const { data: firebaseData, isLoading, error: syncError, saveConfig, saveState, saveWorkRecords, saveWorkRecordGroups, saveTrash, saveDutyLogConfig } = useFirebaseSync();
 
   // --- Configuration State ---
   const [basicTasks, setBasicTasks] = useState<TaskItem[]>(INITIAL_BASIC_TASKS);
@@ -611,6 +611,23 @@ const App: React.FC = () => {
         <div className="text-center space-y-4">
           <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
           <p className="text-gray-500 text-sm font-medium">載入資料中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (syncError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="text-red-600 text-lg font-bold">{syncError}</p>
+          <p className="text-gray-500 text-sm">無法連線到資料庫，請檢查網路後重新整理頁面。</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium"
+          >
+            重新整理
+          </button>
         </div>
       </div>
     );

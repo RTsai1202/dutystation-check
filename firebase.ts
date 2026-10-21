@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
+import { getAuth, signInAnonymously } from 'firebase/auth';
 
 const firebaseConfig = {
     apiKey: "AIzaSyAns07Sj4fQxJuUPXWt-iWsFTfkVcDVYFA",
@@ -14,3 +15,22 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const database = getDatabase(app);
+export const auth = getAuth(app);
+
+let authPromise: Promise<void> | null = null;
+
+// 確保已匿名登入；RTDB 規則要求 auth != null，需在任何讀寫之前呼叫
+export function ensureSignedIn(): Promise<void> {
+    if (auth.currentUser) {
+        return Promise.resolve();
+    }
+    if (!authPromise) {
+        authPromise = signInAnonymously(auth)
+            .then(() => undefined)
+            .catch((error) => {
+                authPromise = null;
+                throw error;
+            });
+    }
+    return authPromise;
+}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { ref, onValue, set, get, update } from 'firebase/database';
-import { database } from './firebase';
+import { database, ensureSignedIn } from './firebase';
 import { deriveWorkRecordsInitialized } from './workRecordInitialization';
 import {
     TaskItem,
@@ -32,6 +32,7 @@ export interface FirebaseData {
 interface UseFirebaseSyncResult {
     data: FirebaseData | null;
     isLoading: boolean;
+    error: string | null;
     saveConfig: (basic: TaskItem[], shifts: ShiftSection[], statuses: StatusConfig[]) => void;
     saveState: (checked: Record<string, boolean>, handover: HandoverItem[]) => void;
     saveWorkRecords: (records: WorkRecord[]) => void;
@@ -71,37 +72,65 @@ function parseFirebaseSnapshot(val: any): FirebaseData {
 export function useFirebaseSync(): UseFirebaseSyncResult {
     const [data, setData] = useState<FirebaseData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     // 記錄最後一次本地寫入的時間，用來忽略寫入後立即觸發的 onValue
     const lastWriteTime = useRef(0);
     const WRITE_DEBOUNCE_MS = 2000; // 寫入後 2 秒內的回呼忽略
 
     useEffect(() => {
-        // 第一步：用 get() 一次性讀取，確保首次載入可靠
-        const rootRef = ref(database, DB_PATH);
-        get(rootRef).then((snapshot) => {
-            const val = snapshot.val();
-            setData(parseFirebaseSnapshot(val));
-            setIsLoading(false);
-        }).catch((error) => {
-            console.error('Firebase 首次讀取失敗:', error);
-            setIsLoading(false);
-        });
+        let cancelled = false;
+        let unsub: (() => void) | null = null;
 
-        // 第二步：設定 onValue 監聽，用於其他裝置的即時同步
-        const unsub = onValue(rootRef, (snapshot) => {
-            // 如果是剛剛本地寫入觸發的回呼，忽略它
-            const timeSinceWrite = Date.now() - lastWriteTime.current;
-            if (timeSinceWrite < WRITE_DEBOUNCE_MS) {
+        const start = async () => {
+            // 第零步：先匿名登入（RTDB 規則要求 auth != null）
+            try {
+                await ensureSignedIn();
+            } catch (err) {
+                console.error('Firebase 匿名登入失敗:', err);
+                if (!cancelled) {
+                    setError('連線失敗');
+                    setIsLoading(false);
+                }
                 return;
             }
-            const val = snapshot.val();
-            setData(parseFirebaseSnapshot(val));
-        }, (error) => {
-            console.error('Firebase 監聽錯誤:', error);
-        });
+            if (cancelled) return;
 
-        return () => unsub();
+            const rootRef = ref(database, DB_PATH);
+
+            // 第一步：用 get() 一次性讀取，確保首次載入可靠
+            get(rootRef).then((snapshot) => {
+                if (cancelled) return;
+                const val = snapshot.val();
+                setData(parseFirebaseSnapshot(val));
+                setIsLoading(false);
+            }).catch((err) => {
+                console.error('Firebase 首次讀取失敗:', err);
+                if (cancelled) return;
+                setError('連線失敗');
+                setIsLoading(false);
+            });
+
+            // 第二步：設定 onValue 監聽，用於其他裝置的即時同步
+            unsub = onValue(rootRef, (snapshot) => {
+                // 如果是剛剛本地寫入觸發的回呼，忽略它
+                const timeSinceWrite = Date.now() - lastWriteTime.current;
+                if (timeSinceWrite < WRITE_DEBOUNCE_MS) {
+                    return;
+                }
+                const val = snapshot.val();
+                setData(parseFirebaseSnapshot(val));
+            }, (err) => {
+                console.error('Firebase 監聽錯誤:', err);
+            });
+        };
+
+        start();
+
+        return () => {
+            cancelled = true;
+            if (unsub) unsub();
+        };
     }, []);
 
     const markWrite = () => {
@@ -156,6 +185,7 @@ export function useFirebaseSync(): UseFirebaseSyncResult {
     return {
         data,
         isLoading,
+        error,
         saveConfig,
         saveState,
         saveWorkRecords,

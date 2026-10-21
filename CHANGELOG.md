@@ -1,5 +1,17 @@
 # 變更紀錄 (Changelog)
 
+## 2026-10-21
+
+### 🔒 RTDB 改為需匿名登入才能讀寫
+
+**起因：** 2026-02-23 的規則僅限制路徑，`dutystation` 仍是 `.read/.write: true`，任何人不需登入即可讀寫分隊值班資料。
+
+**修正方式：**
+- `database.rules.json`：`dutystation` 的 `.read/.write` 改為 `auth != null`，其餘路徑預設拒絕；新增 `firebase.json`、`.firebaserc`（project `dutystation-check`）。
+- `firebase.ts`：新增 `ensureSignedIn()`（`signInAnonymously`）；`useFirebaseSync.ts` 在首次 `get()`／`onValue` 前先 `await ensureSignedIn()`，失敗時顯示「連線失敗」畫面而非空資料。
+- 已用 firebase-tools 部署規則（`GOOGLE_CLOUD_QUOTA_PROJECT=dutystation-check npx firebase-tools deploy --only database`）。
+- **前置條件：** Firebase Console → Authentication → Sign-in method 必須啟用「匿名」，否則前端無法登入。
+
 ## 2026-02-23
 
 ### 🔒 Firebase Realtime Database 安全規則修正

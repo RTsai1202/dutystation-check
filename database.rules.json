@@ -1,0 +1,8 @@
+{
+  "rules": {
+    "dutystation": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}
